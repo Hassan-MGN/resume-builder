@@ -186,46 +186,18 @@ const Preview = ({ resume, template }) => {
       )
       const canvas = await html2canvas(
         exportElement,{scale: 2, useCORS: true, allowTaint: false, backgroundColor: "#ffffff", logging: false, imageTimeout: 20000, removeContainer: true, foreignObjectRendering: false, width: exportElement.scrollWidth, height: exportElement.scrollHeight, windowWidth: 794,});
-
-      /*
-       * Remove clone immediately after rendering.
-       */
       exportElement.remove();
       exportElement = null;
-
       if (!canvas.width || !canvas.height) {
-        throw new Error(
-          "The resume image could not be generated."
-        );
+        throw new Error("The resume image could not be generated.")
       }
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true,
-      });
-
-      const pageWidth = 210;
-      const pageHeight = 297;
-
-      /*
-       * Convert canvas pixels into PDF millimeters.
-       */
-      const pxPerMm =
-        canvas.width / pageWidth;
-
-      const pageHeightPx =
-        pageHeight * pxPerMm;
-
-      /*
-       * If resume is longer than one page, split it
-       * into multiple A4 pages.
-       */
-      const totalPages = Math.ceil(
-        canvas.height / pageHeightPx
-      );
-
+      const pdf = new jsPDF({orientation: "portrait",unit: "mm",format: "a4",compress: true,})
+      const pageWidth = 210
+      const pageHeight = 297
+      const pxPerMm = canvas.width / pageWidth
+      const pageHeightPx = pageHeight * pxPerMm
+      const totalPages = Math.ceil(canvas.height / pageHeightPx)
       for (
         let page = 0;
         page < totalPages;
@@ -234,565 +206,108 @@ const Preview = ({ resume, template }) => {
         if (page > 0) {
           pdf.addPage();
         }
-
-        const sourceY =
-          page * pageHeightPx;
-
-        const remainingHeight =
-          canvas.height - sourceY;
-
-        const sliceHeight = Math.min(
-          pageHeightPx,
-          remainingHeight
-        );
-
-        const pageCanvas =
-          document.createElement("canvas");
-
+        const sourceY = page * pageHeightPx;
+        const remainingHeight = canvas.height - sourceY;
+        const sliceHeight = Math.min(pageHeightPx,remainingHeight)
+        const pageCanvas = document.createElement("canvas");
         pageCanvas.width = canvas.width;
-        pageCanvas.height = Math.ceil(
-          sliceHeight
-        );
-
-        const context =
-          pageCanvas.getContext("2d");
-
+        pageCanvas.height = Math.ceil(sliceHeight)
+        const context = pageCanvas.getContext("2d");
         context.fillStyle = "#ffffff";
-        context.fillRect(
-          0,
-          0,
-          pageCanvas.width,
-          pageCanvas.height
-        );
-
-        context.drawImage(
-          canvas,
-          0,
-          sourceY,
-          canvas.width,
-          sliceHeight,
-          0,
-          0,
-          canvas.width,
-          sliceHeight
-        );
-
-        const pageImage =
-          pageCanvas.toDataURL(
-            "image/jpeg",
-            0.95
-          );
-
-        const imageHeight =
-          (sliceHeight / pxPerMm);
-
-        pdf.addImage(
-          pageImage,
-          "JPEG",
-          0,
-          0,
-          pageWidth,
-          imageHeight,
-          undefined,
-          "FAST"
-        );
+        context.fillRect(0,0,pageCanvas.width,pageCanvas.height)
+        context.drawImage(canvas,0,sourceY,canvas.width,sliceHeight,0,0,canvas.width,sliceHeight)
+        const pageImage = pageCanvas.toDataURL("image/jpeg",0.95)
+        const imageHeight = (sliceHeight / pxPerMm)
+        pdf.addImage(pageImage,"JPEG",0,0,pageWidth,imageHeight,undefined,"FAST")
       }
 
       pdf.save("resume.pdf");
     } catch (error) {
-      console.error(
-        "PDF generation error:",
-        error
-      );
-
+      console.error("PDF generation error:",error)
       if (exportElement) {
         exportElement.remove();
       }
-
-      alert(
-        "Could not generate the PDF. Please try again."
-      );
+      alert("Could not generate the PDF. Please try again.")
     } finally {
       setIsDownloading(false);
     }
-  };
-
-  /* =========================================================
-     RENDER
-     ========================================================= */
+  }
 
   return (
     <div className="w-full">
-
-      {/* TOP BAR */}
-
       <div className="sticky top-0 z-30 mb-4">
-        <div className="
-          rounded-lg
-          border border-gray-200
-          bg-white/95
-          backdrop-blur-xl
-          shadow-lg
-          px-4
-          py-3
-        ">
-          <div className="
-            flex
-            items-center
-            justify-between
-            gap-4
-          ">
-
+        <div className="rounded-lg border border-gray-200 bg-white/95 backdrop-blur-xl shadow-lg px-4 py-3">
+          <div className=" flex items-center justify-between gap-4">
             <div>
-              <p className="
-                text-[10px]
-                font-bold
-                uppercase
-                tracking-[0.2em]
-                text-gray-400
-              ">
-                Resume Studio
-              </p>
-
-              <h2 className="
-                text-lg
-                font-bold
-                text-gray-900
-              ">
-                Live Preview
-              </h2>
+              <p className=" text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Resume Studio</p>
+              <h2 className=" text-lg font-bold text-gray-900">Live Preview</h2>
             </div>
-
-            {/* SCORE */}
-
+          
             <div className="hidden sm:flex items-center gap-3">
               <div className="relative w-12 h-12">
-                <svg
-                  className="w-12 h-12 -rotate-90"
-                  viewBox="0 0 40 40"
-                >
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r="16"
-                    fill="none"
-                    stroke="#e5e7eb"
-                    strokeWidth="3"
-                  />
-
-                  <motion.circle
-                    cx="20"
-                    cy="20"
-                    r="16"
-                    fill="none"
-                    stroke={theme.primary}
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeDasharray="100"
-                    animate={{
-                      strokeDashoffset:
-                        100 - score,
-                    }}
-                    transition={{
-                      duration: 0.5,
-                    }}
-                    pathLength="100"
-                  />
+                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 40 40">
+                  <circle cx="20" cy="20" r="16" fill="none" stroke="#e5e7eb" strokeWidth="3"/>
+                  <motion.circle cx="20" cy="20" r="16" fill="none" stroke={theme.primary} strokeWidth="3" strokeLinecap="round" strokeDasharray="100" animate={{ strokeDashoffset: 100 - score,}} transition={{ duration: 0.5,}} pathLength="100"/>
                 </svg>
-
-                <span className="
-                  absolute
-                  inset-0
-                  flex
-                  items-center
-                  justify-center
-                  text-[10px]
-                  font-bold
-                ">
-                  {score}
-                </span>
+                <span className=" absolute inset-0 flex items-center justify-center text-[10px] font-bold">{score}</span>
               </div>
-
               <div>
-                <p className="
-                  text-xs
-                  font-semibold
-                  text-gray-900
-                ">
-                  Resume Strength
-                </p>
-
-                <p className="
-                  text-[10px]
-                  text-gray-400
-                ">
-                  Updates automatically
-                </p>
+                <p className="text-xs font-semibold text-gray-900">Resume Strength</p>
+                <p className="text-[10px] text-gray-400">Updates automatically</p>
               </div>
             </div>
 
-            {/* ACTIONS */}
-
             <div className="flex items-center gap-2">
-
-              <button
-                type="button"
-                onClick={zoomOut}
-                className="
-                  w-9
-                  h-9
-                  rounded-lg
-                  border
-                  border-gray-200
-                  hover:bg-gray-50
-                  font-semibold
-                "
-              >
-                −
-              </button>
-
-              <button
-                type="button"
-                onClick={resetZoom}
-                className="
-                  px-3
-                  h-9
-                  rounded-lg
-                  border
-                  border-gray-200
-                  hover:bg-gray-50
-                  text-xs
-                  font-semibold
-                "
-              >
-                {Math.round(zoom * 100)}%
-              </button>
-
-              <button
-                type="button"
-                onClick={zoomIn}
-                className="
-                  w-9
-                  h-9
-                  rounded-lg
-                  border
-                  border-gray-200
-                  hover:bg-gray-50
-                  font-semibold
-                "
-              >
-                +
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowGuides(
-                    (value) => !value
-                  )
-                }
-                className={`
-                  hidden md:block
-                  px-3
-                  h-9
-                  rounded-lg
-                  border
-                  text-xs
-                  font-medium
-                  transition
-                  ${
-                    showGuides
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "border-gray-200 text-gray-600"
-                  }
-                `}
-              >
-                Guides
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={isDownloading}
-                className="
-                  ml-1
-                  h-9
-                  px-4
-                  rounded-lg
-                  text-white
-                  text-xs
-                  font-semibold
-                  shadow-sm
-                  hover:opacity-90
-                  transition
-                  disabled:opacity-60
-                  disabled:cursor-wait
-                "
-                style={{
-                  backgroundColor:
-                    theme.primary,
-                }}
-              >
-                {isDownloading
-                  ? "Generating..."
-                  : "PDF"}
-              </button>
+              <button type="button" onClick={zoomOut} className="w-9h-9rounded-lgborder border-gray-200 hover:bg-gray-50 font-semibold">−</button>
+              <button type="button" onClick={resetZoom} className=" px-3 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold">{Math.round(zoom * 100)}%</button>
+              <button type="button" onClick={zoomIn} className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 font-semibold">+</button>
+              <button type="button" onClick={handleDownload} disabled={isDownloading} className="ml-1 h-9 px-4 rounded-lg text-white text-xs font-semibold shadow-sm hover:opacity-90 transition disabled:opacity-60 disabled:cursor-wait"style={{ backgroundColor: theme.primary,}}>{isDownloading ? "Generating..." : "PDF"}</button>
             </div>
           </div>
 
-          {/* THEME */}
-
-          <div className="
-            flex
-            items-center
-            gap-2
-            mt-3
-            pt-3
-            border-t
-            border-gray-100
-          ">
-            <span className="
-              text-[10px]
-              text-gray-400
-              mr-1
-            ">
-              Theme
-            </span>
-
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+            <span className="text-[10px] text-gray-400 mr-1">Theme</span>
             {[
-              {
-                primary: "#172033",
-                secondary: "#64748b",
-                text: "#1f2937",
-                border: "#e2e8f0",
-                light: "#eef2ff",
-              },
-              {
-                primary: "#4f46e5",
-                secondary: "#6366f1",
-                text: "#1f2937",
-                border: "#e5e7eb",
-                light: "#eef2ff",
-              },
-              {
-                primary: "#0f766e",
-                secondary: "#14b8a6",
-                text: "#1f2937",
-                border: "#d1fae5",
-                light: "#ecfdf5",
-              },
-              {
-                primary: "#9f1239",
-                secondary: "#e11d48",
-                text: "#1f2937",
-                border: "#ffe4e6",
-                light: "#fff1f2",
-              },
+              {primary: "#172033",secondary: "#64748b",text: "#1f2937",border: "#e2e8f0",light: "#eef2ff",},
+              {primary: "#4f46e5",secondary: "#6366f1",text: "#1f2937",border: "#e5e7eb",light: "#eef2ff",},
+              {primary: "#0f766e",secondary: "#14b8a6",text: "#1f2937",border: "#d1fae5",light: "#ecfdf5",},
+              {primary: "#9f1239",secondary: "#e11d48",text: "#1f2937",border: "#ffe4e6",light: "#fff1f2",},
             ].map((palette, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() =>
-                  setTheme(palette)
-                }
-                className="
-                  w-7
-                  h-7
-                  rounded-full
-                  border-2
-                  border-white
-                  shadow
-                  ring-1
-                  ring-gray-200
-                  hover:scale-110
-                  transition
-                "
-                style={{
-                  background:
-                    `linear-gradient(135deg, ${palette.primary} 50%, ${palette.secondary} 50%)`,
-                }}
-                aria-label={`Theme ${index + 1}`}
-              />
+              <button key={index} type="button" onClick={() => setTheme(palette)} className="w-7 h-7 rounded-full border-2 border-white shadow ring-1 ring-gray-200 hover:scale-110 transition" style={{ background: `linear-gradient(135deg, ${palette.primary} 50%, ${palette.secondary} 50%)`,}} aria-label={`Theme ${index + 1}`}/>
             ))}
           </div>
         </div>
       </div>
 
-      {/* CANVAS */}
-
-      <div
-        className="
-          relative
-          rounded-lg
-          border
-          border-gray-200
-          bg-[#dfe3e8]
-          overflow-hidden
-        "
-        style={{
-          minHeight: "850px",
-        }}
-      >
-        <div className="
-          h-11
-          bg-white/90
-          backdrop-blur
-          border-b
-          border-gray-200
-          flex
-          items-center
-          justify-between
-          px-4
-        ">
+      <div className="relative rounded-lg border border-gray-200 bg-[#dfe3e8] overflow-hidden" style={{ minHeight: "850px",}}>
+        <div className=" h-11 bg-white/90 backdrop-blur border-b border-gray-200 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{
-                backgroundColor:
-                  theme.secondary,
-              }}
-            />
-
-            <span className="
-              text-[11px]
-              font-semibold
-              text-gray-600
-            ">
-              Canvas
-            </span>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.secondary,}}/>
+            <span className="text-[11px] font-semibold text-gray-600">Canvas</span>
           </div>
-
-          <span className="
-            text-[10px]
-            text-gray-400
-          ">
-            A4 • 794 × 1123 px
-          </span>
+          <span className="text-[10px] text-gray-400">A4 • 794 × 1123 px</span>
         </div>
 
-        {/* SCROLL */}
-
-        <div
-          ref={previewScrollRef}
-          className="
-            relative
-            overflow-auto
-            h-[calc(100vh-230px)]
-            min-h-[760px]
-          "
-        >
-
-          {/* GUIDES */}
-
+        <div ref={previewScrollRef} className="relative overflow-auto h-[calc(100vh-230px)] min-h-[760px]">
           {showGuides && (
             <>
-              <div
-                className="
-                  absolute
-                  left-0
-                  right-0
-                  border-t-2
-                  border-dashed
-                  border-red-400/60
-                  pointer-events-none
-                  z-20
-                "
-                style={{
-                  top: `${1123 * zoom + 30}px`,
-                }}
-              >
-                <span className="
-                  absolute
-                  right-3
-                  -top-5
-                  text-[9px]
-                  font-semibold
-                  text-red-400
-                  bg-[#dfe3e8]
-                  px-2
-                ">
-                  PAGE 2 START
-                </span>
+              <div className="absolute left-0 right-0 border-t-2 border-dashed border-red-400/60 pointer-events-none z-20"  style={{top: `${1123 * zoom + 30}px`,}}>
+                <span className="absolute right-3 -top-5 text-[9px] font-semibold text-red-400 bg-[#dfe3e8] px-2">PAGE 2 START</span>
               </div>
-
               <div
-                className="
-                  absolute
-                  left-0
-                  right-0
-                  border-t
-                  border-dashed
-                  border-gray-400/40
-                  pointer-events-none
-                "
-                style={{
-                  top: `${1123 * zoom}px`,
-                }}
-              />
+                className="absolute left-0 right-0 border-t border-dashed border-gray-400/40 pointer-events-none" style={{top: `{1123 * zoom}px`}} />
             </>
           )}
 
           <AnimatePresence mode="wait">
             {isSwitching ? (
-              <motion.div
-                key="skeleton"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+              <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <PreviewSkeleton />
               </motion.div>
             ) : (
-              <motion.div
-                key={`${template}-${theme.primary}`}
-                initial={{
-                  opacity: 0,
-                  y: 15,
-                  scale: 0.98,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                }}
-                transition={{
-                  duration: 0.4,
-                  ease: [
-                    0.22,
-                    1,
-                    0.36,
-                    1,
-                  ],
-                }}
-                style={{
-                  transform:
-                    `scale(${zoom})`,
-                  transformOrigin:
-                    "top center",
-                  width:
-                    `${100 / zoom}%`,
-                  minHeight:
-                    `${1123 / zoom}px`,
-                }}
-              >
-                {/* 
-                   IMPORTANT:
-                   This is the element the PDF exporter finds.
-                */}
-                <div
-                  id="resume-preview"
-                  className="
-                    w-[794px]
-                    min-h-[1123px]
-                    bg-white
-                    mx-auto
-                  "
-                >
-                  <TemplateRenderer
-                    resume={resume}
-                    template={template}
-                    theme={theme}
-                  />
+              <motion.div key={`${template}-${theme.primary}`} initial={{ opacity: 0, y: 15, scale: 0.98,}} animate={{ opacity: 1, y: 0, scale: 1,}} transition={{ duration: 0.4, ease: [ 0.22, 1, 0.36, 1,],}} style={{ transform:`scale(${zoom})`, transformOrigin:"top center", width: `${100 / zoom}%`, minHeight: `${1123 / zoom}px`,}}>
+                <div id="resume-preview" className=" w-[794px] min-h-[1123px] bg-white mx-auto">
+                  <TemplateRenderer resume={resume} template={template} theme={theme}/>
                 </div>
               </motion.div>
             )}
