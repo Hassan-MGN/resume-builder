@@ -1,41 +1,27 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+import React, { useEffect,useMemo,useRef,useState, } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-
 import Template1 from "./templates/Template1";
 import Template2 from "./templates/Template2";
 import Template3 from "./templates/Template3";
-
-/* =========================================================
-   SKELETON
-   ========================================================= */
 
 const PreviewSkeleton = () => (
   <div className="flex justify-center p-8">
     <div className="w-[794px] min-h-[1123px] bg-white shadow-xl p-12 animate-pulse">
       <div className="h-8 w-1/2 bg-gray-200 rounded mb-3" />
       <div className="h-4 w-1/3 bg-gray-200 rounded mb-10" />
-
       <div className="space-y-4">
         <div className="h-4 bg-gray-200 rounded" />
         <div className="h-4 bg-gray-200 rounded w-11/12" />
         <div className="h-4 bg-gray-200 rounded w-9/12" />
       </div>
-
       <div className="mt-12 space-y-4">
         <div className="h-5 w-1/4 bg-gray-200 rounded" />
         <div className="h-3 bg-gray-200 rounded" />
         <div className="h-3 bg-gray-200 rounded w-10/12" />
         <div className="h-3 bg-gray-200 rounded w-8/12" />
       </div>
-
       <div className="mt-12 space-y-4">
         <div className="h-5 w-1/3 bg-gray-200 rounded" />
         <div className="h-3 bg-gray-200 rounded" />
@@ -44,174 +30,92 @@ const PreviewSkeleton = () => (
     </div>
   </div>
 );
-
-/* =========================================================
-   TEMPLATE RENDERER
-   ========================================================= */
-
 const TemplateRenderer = ({ resume, template, theme }) => {
   if (template === "Professional") {
     return <Template1 resume={resume} theme={theme} />;
   }
-
   if (template === "Modern") {
     return <Template2 resume={resume} theme={theme} />;
   }
-
   if (template === "Minimal") {
     return <Template3 resume={resume} theme={theme} />;
   }
-
   return null;
 };
-
-/* =========================================================
-   PREVIEW
-   ========================================================= */
 
 const Preview = ({ resume, template }) => {
   const [isSwitching, setIsSwitching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-
   const [zoom, setZoom] = useState(0.72);
   const [showGuides, setShowGuides] = useState(true);
-
-  const [theme, setTheme] = useState({
-    primary: "#172033",
-    secondary: "#64748b",
-    text: "#1f2937",
-    muted: "#64748b",
-    border: "#e2e8f0",
-    light: "#eef2ff",
+  const [theme, setTheme] = useState({primary: "#172033",secondary: "#64748b",text: "#1f2937",muted: "#64748b",border: "#e2e8f0",light: "#eef2ff",
   });
 
   const previewScrollRef = useRef(null);
 
-  /* =========================================================
-     TEMPLATE SWITCH
-     ========================================================= */
-
   useEffect(() => {
     if (!template) return;
-
     setIsSwitching(true);
-
     const timer = setTimeout(() => {
       setIsSwitching(false);
     }, 400);
-
     return () => clearTimeout(timer);
   }, [template]);
 
-  /* =========================================================
-     SCORE
-     ========================================================= */
-
   const score = useMemo(() => {
     if (!resume) return 0;
-
     let points = 0;
-
     if (resume.personal?.fullname) points += 10;
     if (resume.personal?.email) points += 10;
     if (resume.personal?.phone) points += 5;
     if (resume.personal?.location) points += 5;
     if (resume.personal?.linkedin) points += 5;
-
     if (resume.summary?.length >= 80) points += 15;
-
     if (resume.experience?.length) points += 20;
     if (resume.education?.length) points += 10;
     if (resume.skills?.length >= 4) points += 10;
     if (resume.projects?.length) points += 10;
-
     return Math.min(points, 100);
   }, [resume]);
-
-  /* =========================================================
-     ZOOM
-     ========================================================= */
 
   const zoomIn = () => {
     setZoom((value) => Math.min(value + 0.1, 1.3));
   };
-
   const zoomOut = () => {
     setZoom((value) => Math.max(value - 0.1, 0.4));
   };
-
   const resetZoom = () => {
     setZoom(0.72);
-
     if (previewScrollRef.current) {
-      previewScrollRef.current.scrollTo({
-        left: 0,
-        top: 0,
-        behavior: "smooth",
-      });
+      previewScrollRef.current.scrollTo({left: 0,top: 0,behavior: "smooth",});
     }
   };
 
-  /* =========================================================
-     WAIT FOR IMAGES
-     ========================================================= */
 
   const waitForImages = async (element) => {
-    const images = Array.from(
-      element.querySelectorAll("img")
-    );
-
+    const images = Array.from(element.querySelectorAll("img"));
     await Promise.all(
       images.map((img) => {
         if (img.complete) {
           return Promise.resolve();
         }
-
         return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
+          img.onload = resolve
+          img.onerror = resolve
+        })
       })
-    );
-  };
-
-  /* =========================================================
-     REPLACE UNSUPPORTED CSS COLORS
-     ========================================================= */
+    )
+  }
 
   const sanitizeStyles = (root) => {
-    const allElements = [
-      root,
-      ...root.querySelectorAll("*"),
-    ];
-
-    const unsafe = (value) =>
-      value &&
-      (
-        value.includes("oklch(") ||
-        value.includes("oklab(") ||
-        value.includes("color-mix(")
-      );
-
+    const allElements = [root,...root.querySelectorAll("*"),];
+    const unsafe = (value) => value &&
+      (value.includes("oklch(") || value.includes("oklab(") || value.includes("color-mix("))
     allElements.forEach((el) => {
-      const computed = window.getComputedStyle(el);
-
-      const properties = [
-        "color",
-        "backgroundColor",
-        "borderTopColor",
-        "borderRightColor",
-        "borderBottomColor",
-        "borderLeftColor",
-        "outlineColor",
-        "textDecorationColor",
-        "fill",
-        "stroke",
-      ];
-
+      const computed = window.getComputedStyle(el)
+      const properties = ["color","backgroundColor","borderTopColor","borderRightColor","borderBottomColor","borderLeftColor","outlineColor","textDecorationColor","fill","stroke",]
       properties.forEach((property) => {
         const value = computed[property];
-
         if (unsafe(value)) {
           if (
             property === "backgroundColor"
@@ -238,114 +142,50 @@ const Preview = ({ resume, template }) => {
       });
     });
   };
-
-  /* =========================================================
-     PDF DOWNLOAD
-     ========================================================= */
-
   const handleDownload = async () => {
     if (isDownloading) return;
-
     setIsDownloading(true);
-
     let exportElement = null;
-
     try {
-      const source = document.getElementById(
-        "resume-preview"
-      );
-
+      const source = document.getElementById("resume-preview")
       if (!source) {
-        throw new Error(
-          "Resume preview element was not found."
-        );
+        throw new Error("Resume preview element was not found.")
       }
-
-      /*
-       * Clone only the actual resume.
-       * Do not export the zoom wrapper, canvas, toolbar,
-       * guides or animation container.
-       */
       exportElement = source.cloneNode(true);
-
-      /*
-       * Remove anything that should never appear in PDF.
-       */
-      exportElement
-        .querySelectorAll(
-          "[data-pdf-ignore], .pdf-ignore"
-        )
-        .forEach((el) => el.remove());
-
-      /*
-       * Put clone off-screen but give it a fixed A4
-       * pixel width.
-       */
-      exportElement.style.position = "fixed";
+      exportElement.querySelectorAll("[data-pdf-ignore], .pdf-ignore").forEach((el) => el.remove());
+      exportElement.style.position = "fixed"
       exportElement.style.left = "-100000px";
-      exportElement.style.top = "0";
-      exportElement.style.margin = "0";
-      exportElement.style.padding = "0";
-      exportElement.style.width = "794px";
-      exportElement.style.minWidth = "794px";
-      exportElement.style.maxWidth = "794px";
-      exportElement.style.height = "auto";
-      exportElement.style.minHeight = "1123px";
-      exportElement.style.background = "#ffffff";
-      exportElement.style.backgroundColor = "#ffffff";
-      exportElement.style.transform = "none";
-      exportElement.style.transformOrigin = "top left";
-      exportElement.style.overflow = "visible";
-      exportElement.style.boxShadow = "none";
+      exportElement.style.top = "0"
+      exportElement.style.margin = "0"
+      exportElement.style.padding = "0"
+      exportElement.style.width = "794px"
+      exportElement.style.minWidth = "794px"
+      exportElement.style.maxWidth = "794px"
+      exportElement.style.height = "auto"
+      exportElement.style.minHeight = "1123px"
+      exportElement.style.background = "#ffffff"
+      exportElement.style.backgroundColor = "#ffffff"
+      exportElement.style.transform = "none"
+      exportElement.style.transformOrigin = "top left"
+      exportElement.style.overflow = "visible"
+      exportElement.style.boxShadow = "none"
 
-      /*
-       * Prevent animation from affecting PDF.
-       */
-      exportElement
-        .querySelectorAll("*")
-        .forEach((el) => {
-          el.style.animation = "none";
-          el.style.transition = "none";
-          el.style.transform = el.style.transform || "";
-        });
+      exportElement.querySelectorAll("*").forEach((el) => {
+          el.style.animation = "none"
+          el.style.transition = "none"
+          el.style.transform = el.style.transform || ""
+        })
 
-      document.body.appendChild(exportElement);
-
-      /*
-       * Wait for profile photos and other images.
-       */
-      await waitForImages(exportElement);
-
-      /*
-       * Convert unsupported browser/Tailwind colors.
-       */
+      document.body.appendChild(exportElement)
+      await waitForImages(exportElement)
       sanitizeStyles(exportElement);
-
-      /*
-       * Allow browser layout to settle.
-       */
       await new Promise((resolve) =>
         requestAnimationFrame(() =>
           requestAnimationFrame(resolve)
         )
-      );
-
+      )
       const canvas = await html2canvas(
-        exportElement,
-        {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: "#ffffff",
-          logging: false,
-          imageTimeout: 20000,
-          removeContainer: true,
-          foreignObjectRendering: false,
-          width: exportElement.scrollWidth,
-          height: exportElement.scrollHeight,
-          windowWidth: 794,
-        }
-      );
+        exportElement,{scale: 2, useCORS: true, allowTaint: false, backgroundColor: "#ffffff", logging: false, imageTimeout: 20000, removeContainer: true, foreignObjectRendering: false, width: exportElement.scrollWidth, height: exportElement.scrollHeight, windowWidth: 794,});
 
       /*
        * Remove clone immediately after rendering.
