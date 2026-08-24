@@ -7,9 +7,6 @@ import Template1 from "./templates/Template1";
 import Template2 from "./templates/Template2";
 import Template3 from "./templates/Template3";
 
-// =========================================================
-// INITIAL RESUME
-// =========================================================
 
 const initialResume = {
   personal: {
@@ -314,12 +311,12 @@ const Builder = () => {
               <p className="max-w-2xl mx-auto mt-4 text-gray-500">Start from scratch or upload your existing CV and transform it into a polished professional resume.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-6 mt-8">
-              <button type="button" onClick={() => setMode("upload")} className="group text-left bg-white border border-gray-200 rounded-xl p-8 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-100 transition-all duration-300">
+              <button type="button" onClick={() => setMode("upload")} className="group text-left bg-white border border-gray-200 rounded-xl p-8 hover:border-cyan-300 transition-all duration-300">
                 <h3 className="text-xl font-bold mt-6">Upload Existing CV</h3>
                 <p className="text-gray-500 mt-2 leading-6">Extract your existing resume information and place it directly into our templates.</p>
                 <div className="mt-6 text-cyan-600 font-semibold text-sm">Upload CV</div>
               </button>
-              <button type="button" onClick={() => setMode("scratch")} className="group text-left bg-white border border-gray-200 rounded-xl p-8 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-100 transition-all duration-300">
+              <button type="button" onClick={() => setMode("scratch")} className="group text-left bg-white border border-gray-200 rounded-xl p-8 hover:border-cyan-300 transition-all duration-300">
                 <h3 className="text-xl font-bold mt-6">Create From Scratch</h3>
                   <p className="text-gray-500 mt-2 leading-6">Build your resume manually using our professional templates and editing workspace.</p>
                   <div className="mt-6 text-cyan-600 font-semibold text-sm">Start building</div>
