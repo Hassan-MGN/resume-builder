@@ -7,7 +7,7 @@ import PvtRoute from "./components/PvtRoute";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword"
 import Builder from "./components/resume/Builder";
-import Form from "./components/resume/Form";
+import Form from "./components/resume/form/Form";
 
 export const router = createBrowserRouter([
   {

@@ -1,12 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Form from "./Form";
-import Preview from "./Preview";
+import ResumeWizard from "./builder/ResumeWizard";
 import { parseCV } from "../../utils/cvParser";
-
-import Template1 from "./templates/Template1";
-import Template2 from "./templates/Template2";
-import Template3 from "./templates/Template3";
-
+import ApiKeyModal from "./form/ui/ApiKeyModal";
 
 const initialResume = {
   personal: {
@@ -47,6 +42,26 @@ const initialResume = {
       link: "",
     },
   ],
+
+   layout: {
+    sectionOrder: [
+      "personal",
+      "summary",
+      "experience",
+      "education",
+      "skills",
+      "certificates",
+      "languages",
+      "projects",
+      "hobbies",
+    ],
+
+    fontFamily: "Inter",
+    fontSize: 14,
+    lineHeight: 1.5,
+    sectionSpacing: 24,
+    pageMargin: 40,
+  },
 };
 
 const BUILDER_STORAGE_KEY = "resume-builder-state";
@@ -110,72 +125,22 @@ const Builder = () => {
     }
   })
 
-  const [activeSection, setActiveSection] = useState(() => {
-    try {
-      const saved = localStorage.getItem(
-        BUILDER_STORAGE_KEY
-      );
-      if (!saved) return "personal"
-      const data = JSON.parse(saved)
-      return data.activeSection ?? "personal"
-    } catch (error) {
-      console.error(
-        "Unable to restore active section:",
-        error
-      )
-      return "personal"
-    }
-  })
-
-
   const [uploadedFile, setUploadedFile] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [uploadError, setUploadError] = useState("")
   const [theme, setTheme] = useState({primary: "#4f46e5", secondary: "#64748b", text: "#111827", })
+  const [apiModalOpen, setApiModalOpen] = useState(false)
     
   useEffect(() => {
     try {
-      const builderState = {mode,template, resume, activeSection,}
+      const builderState = {mode,template, resume}
       localStorage.setItem(BUILDER_STORAGE_KEY, JSON.stringify(builderState))
     } catch (error) {
       console.error("Unable to save builder state:",error)
     }
-  }, [mode,template, resume, activeSection])
+  }, [mode,template, resume])
   
-  const resumeScore = useMemo(() => {
-    let score = 0
-
-    const personal = resume.personal || {}
-
-    if (personal.fullname) score += 10
-    if (personal.email) score += 10
-    if (personal.phone) score += 5
-    if (personal.location) score += 5
-    if (personal.title) score += 5
-    if (resume.summary?.trim()) score += 15
-
-    if (
-      resume.experience?.some((item) => item.position || item.company || item.description)    
-    ) {
-      score += 20;
-    }
-    if (
-      resume.education?.some((item) => item.degree || item.institution)
-    ) {
-      score += 15;
-    }
-    if (resume.skills?.length > 0) {
-      score += 10;
-    }
-    if (
-      resume.projects?.some((item) => item.name || item.description )
-    ) {
-      score += 5;
-    }
-    return Math.min(score, 100)
-  }, [resume]);
-
   const handleFile = (file) => {
     setUploadError("")
     if (!file) return
@@ -245,11 +210,10 @@ const Builder = () => {
         summary: extractedResume.summary || "",
         experience:Array.isArray( extractedResume.experience )? extractedResume.experience: [],
         education: Array.isArray( extractedResume.education) ? extractedResume.education: [],
-        skills:Array.isArray()? extractedResume.skills: [],
+        skills:Array.isArray(extractedResume.skills)? extractedResume.skills: [],
         projects: Array.isArray( extractedResume.projects)? extractedResume.projects : [],   
       });
       setMode("scratch")
-      setTemplate(null)
     } catch (error) {
       console.error("CV analysis error:",error)
       setUploadError(
@@ -265,15 +229,8 @@ const Builder = () => {
     setUploadedFile(null);
     setUploadError("");
     setResume(initialResume);
-    setActiveSection("personal");
     localStorage.removeItem(BUILDER_STORAGE_KEY);
-  };
-
-
-  const selectTemplate = (value) => {setTemplate(value)}
-  const updateResumeField = ( section,field,value) => {
-    setResume((prev) => ({...prev,[section]: { ...prev[section], [field]: value,},
-    }));
+    localStorage.removeItem("resume-wizard-step");
   };
 
   return (
@@ -282,26 +239,13 @@ const Builder = () => {
         <div className="max-w-[1600px] mx-auto px-6 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="font-bold text-lg tracking-tight">Resume Builder</h1>
-              <p className="text-xs text-gray-500">Professional resume workspace</p>
-            </div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-lg tracking-tight">Resume Builder</h1>
+                <p className="text-xs text-gray-500">Professional resume workspace</p>
+            </div> 
           </div>
-          {template && (
-            <div className="hidden md:flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-gray-400">Resume Strength</p>
-                <p className="text-sm font-bold text-gray-900">{resumeScore}/100</p>
-                </div>
-              <div className="relative w-12 h-12">
-                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0-31.831" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0-31.831" fill="none" stroke={theme.primary} strokeWidth="3" strokeDasharray={`${resumeScore}, 100`} strokeLinecap="round"  className="transition-all duration-500" />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">{resumeScore}%</span>
-              </div>
-            </div>
-          )}
         </div>
+      </div>
       </header>
       <main className="max-w-[1600px] mx-auto px-6 py-8">
         {!mode && (
@@ -360,130 +304,13 @@ const Builder = () => {
               </div>
           </div>
         )}
-        {mode === "scratch" &&
-          !template && (
-            <div>
-              <button type="button" onClick={() => uploadedFile ? setMode("upload") : setMode(null)} className="text-sm text-black-600 font-medium mb-6 hover:underline">Back</button>
-               <div className="mb-8">
-                <h2 className="text-3xl font-bold">Choose your template</h2>
-                <p className="text-gray-500 mt-2"> Select a design. You can change it later. </p>
-              </div>
-              <div className="grid md:grid-cols-3 gap-6">
-                <TemplateCard name="Professional" description="Elegant two-column layout for traditional professional resumes." template="Professional" onSelect={ selectTemplate} />
-                <TemplateCard name="Modern" description="Contemporary design with clean typography and accent colors." template="Modern" onSelect={selectTemplate} />
-                <TemplateCard name="Minimal" description="Simple, clean and ATS-friendly resume layout." template="Minimal" onSelect={selectTemplate} />
-              </div>
-            </div>
-          )}
-        {mode === "scratch" &&
-          template && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <button type="button" onClick={() => setTemplate(null)} className="text-sm text-black-600 font-medium hover:underline">Change template</button>
-                 <div className="flex items-center gap-2">
-                  {["Professional","Modern","Minimal",].map((item) => (<button key={item} type="button" onClick={() => setTemplate(item)} className={`px-3 py-2 rounded-lg text-xs font-semibold transition ${template === item ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{item}</button>))}
-                  </div>
-              </div>
-              <div className="grid xl:grid-cols-[480px_minmax(0,1fr)] gap-6 items-start">
-                <div className="space-y-5">
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                    <div className="p-5 border-b border-gray-100">
-                      <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Resume information</p>
-                      <h2 className="text-xl font-bold mt-1">Build your resume</h2>
-                    </div>
-                    <div className="p-5">
-                      <Form resume={resume} setResume={setResume} />
-                    </div>
-                  </div>
-                </div>
-                <div className="xl:sticky xl:top-[96px]">
-                  <Preview resume={resume} template={template} theme={theme} setResume={setResume} />
-                </div>
-              </div>
-            </div>
-          )}
+        {mode === "scratch" && (
+          <ResumeWizard  resume={resume}  setResume={setResume}  template={template}  setTemplate={setTemplate}  theme={theme}  setTheme={setTheme}  onBack={resetBuilder}/>)}
       </main>
+
+      <ApiKeyModal isOpen={apiModalOpen} onClose={() => setApiModalOpen(false)} />
     </div>
   );
 };
 
-const TemplateCard = ({name,description,template,onSelect,}) => {return (<button type="button" onClick={() => onSelect(template)} className="group text-left bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-100 transition-all duration-300">
-      <div className="h-[390px] bg-gray-100 overflow-hidden"><div className="origin-top-left scale-[0.44] w-[794px] pointer-events-none"><TemplateThumbnail template={template}/></div></div>
-        <div className="p-5">
-          <div className="flex items-center justify-between"><h3 className="font-bold text-lg">{name}</h3><span className="text-cyan-600 opacity-0 group-hover:opacity-100 transition">→</span></div>
-          <p className="text-sm text-gray-500 mt-2 leading-5">{description}</p>
-          </div>
-    </button>
-  );
-};
-
-const TemplateThumbnail = ({template,}) => {
-  const demoResume = {
-    personal: {
-      fullname: "John Doe",
-      title: "Software Developer",
-      email: "john@example.com",
-      phone: "+92 300 1234567",
-      location: "Karachi, Pakistan",
-      linkedin: "linkedin.com/in/johndoe",
-      website: "johndoe.dev",
-      photo: "",
-    },
-    summary:
-      "Creative software developer with experience building modern web applications and AI-powered solutions.",
-    experience: [
-      {
-        company: "Tech Company",
-        position: "Software Developer",
-        startDate: "2024",
-        endDate: "Present",
-        description:
-          "Developed modern web applications using React and Python.",
-      },
-    ],
-    education: [
-      {
-        institution: "University",
-        degree: "Computer Science",
-        startDate: "2021",
-        endDate: "2025",
-        description: "",
-      },
-    ],
-    skills: [
-      "React",
-      "Python",
-      "JavaScript",
-      "SQL",
-    ],
-    projects: [
-      {
-        name: "AI Resume Builder",
-        description:
-          "An AI-powered resume building application.",
-        technologies:
-          "React, Python",
-        link: "",
-      },
-    ],
-  };
-  if (template === "Professional") {
-    return (
-      <Template1 resume={demoResume} />
-    );
-  }
-  if (template === "Modern") {
-    return (
-      <Template2 resume={demoResume} />
-
-    );
-  }
-  if (template === "Minimal") {
-    return (
-      <Template3 resume={demoResume} />
-
-    );
-  }
-  return null;
-};
 export default Builder;

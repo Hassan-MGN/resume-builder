@@ -49,6 +49,10 @@ const resumeSchema = {
           startDate: { type: "string" },
           endDate: { type: "string" },
           description: { type: "string" },
+          responsibilities: {
+            type: "array",
+            items: { type: "string" },
+          },
         },
         required: [
           "company",
@@ -56,6 +60,7 @@ const resumeSchema = {
           "startDate",
           "endDate",
           "description",
+          "responsibilities",
         ],
       },
     },
@@ -88,6 +93,36 @@ const resumeSchema = {
       },
     },
 
+    coreSkills: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+    },
+
+    keyAchievements: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+    },
+
+    additionalInformation: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          heading: { type: "string" },
+          content: { type: "string" },
+          bullets: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        required: ["heading", "content", "bullets"],
+      },
+    },
+
     projects: {
       type: "array",
       items: {
@@ -114,7 +149,10 @@ const resumeSchema = {
     "experience",
     "education",
     "skills",
+    "coreSkills",
+    "keyAchievements",
     "projects",
+    "additionalInformation",
   ],
 };
 
@@ -217,14 +255,24 @@ Extract the information from the resume text below.
 Return ONLY information that is actually present in the CV.
 Do not invent companies, degrees, dates, skills, projects, or personal information.
 
-If a field is not available, return an empty string.
+If a field is not available, return an empty string or empty array.
+
+Important constraints on Extraction:
+1. Preserve bullet points as arrays. Do NOT concatenate lists into single long paragraphs.
+2. Preserve achievements as separate list items.
+3. Extract Core Skills separately when distinguishable from general skills (like "Leadership", "Communication", "Project Management").
+4. Extract Key Achievements separately when they are distinct lists in the CV.
+5. NEVER silently discard useful CV content just because there isn't an obvious field. Place it in "additionalInformation".
+6. Avoid flattening structured bullet point responsibilities. Use the "responsibilities" array within experience.
+7. Keep original meaning and wording as much as possible.
 
 For experience:
 - company = company/employer
 - position = job title
 - startDate = starting date
 - endDate = ending date or Present
-- description = responsibilities and achievements
+- description = general summary paragraph of the role
+- responsibilities = array of individual bullet points (responsibilities/achievements) from the CV
 
 For education:
 - institution = university/school
@@ -233,11 +281,17 @@ For education:
 - endDate = ending date
 - description = additional education information
 
-For skills:
+For skills and coreSkills:
 Return each individual skill as a separate string.
 
 For projects:
 Extract project name, description, technologies, and link if available.
+
+For additionalInformation:
+Use this as a fallback for ANY valuable information (e.g., Volunteer Experience, Conferences, Publications, Awards) that doesn't fit into the other sections.
+- heading = A descriptive heading for the subsection
+- content = Paragraph content if applicable
+- bullets = Array of bullet points if applicable
 
 Resume text:
 

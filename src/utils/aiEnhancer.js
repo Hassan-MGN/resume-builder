@@ -74,17 +74,33 @@ const cleanText = (text = "") => {
    VALIDATION
    ========================================================= */
 
-const getApiKey = () => {
-  const apiKey =
-    import.meta.env.VITE_GEMINI_API_KEY;
+const STORAGE_API_KEY = "gemini-user-api-key";
 
-  if (!apiKey) {
-    throw new Error(
-      "Gemini API key is missing. Add VITE_GEMINI_API_KEY to your .env file."
-    );
+export const getUserApiKey = () =>
+  typeof window !== "undefined"
+    ? window.localStorage.getItem(STORAGE_API_KEY) || ""
+    : "";
+
+export const setUserApiKey = (key) => {
+  if (typeof window !== "undefined") {
+    if (key?.trim()) {
+      window.localStorage.setItem(STORAGE_API_KEY, key.trim());
+    } else {
+      window.localStorage.removeItem(STORAGE_API_KEY);
+    }
   }
+};
 
-  return apiKey;
+const getApiKey = () => {
+  const userKey = getUserApiKey();
+  if (userKey) return userKey;
+
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (envKey) return envKey;
+
+  throw new Error(
+    "No Gemini API key found. Please add your API key in Settings (gear icon)."
+  );
 };
 
 const validateText = (text) => {
@@ -528,11 +544,231 @@ export const enhanceOrProofread = async ({
 };
 
 /* =========================================================
-   DEFAULT EXPORT
+   SMART BULLET POINT GENERATOR
    ========================================================= */
 
-export default {
-  enhanceResumeText,
-  proofreadResumeText,
-  enhanceOrProofread,
+export const generateBulletPoints = async ({ jobTitle }) => {
+  if (!jobTitle?.trim()) {
+    throw new Error("Please enter a job title first.");
+  }
+
+  const ai = createAIClient();
+
+  const prompt = `
+You are a professional resume writer.
+
+Generate 7 strong, achievement-oriented bullet points for a resume's work experience section for the following job title: "${jobTitle.trim()}"
+
+Rules:
+1. Each bullet must start with a strong action verb (e.g. Led, Developed, Reduced, Delivered).
+2. Each bullet should describe a realistic accomplishment or responsibility for this role.
+3. Keep each bullet to one line (under 120 characters).
+4. Do NOT invent specific company names, specific percentages, or specific product names.
+5. Do NOT use emojis or markdown formatting.
+6. Do NOT number the bullets.
+7. Return ONLY a JSON object in this exact shape: { "bullets": ["bullet 1", "bullet 2", ...] }
+`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    },
+  });
+
+  if (!response?.text) throw new Error("Gemini returned an empty response.");
+
+  const data = parseJsonResponse(response.text);
+
+  if (!Array.isArray(data.bullets) || !data.bullets.length) {
+    throw new Error("Gemini did not return valid bullets. Please try again.");
+  }
+
+  return data.bullets.map((b) => cleanText(b)).filter(Boolean);
+};
+
+
+/* =========================================================
+   TONE MODIFIER
+   ========================================================= */
+
+const TONE_DESCRIPTIONS = {
+  Executive:
+    "strategic, authoritative, results-driven. Focus on leadership, business impact, and high-level outcomes. Avoid technical jargon.",
+  Creative:
+    "expressive, enthusiastic, and personality-forward. Highlight innovation, passion, and unique perspective. Keep it engaging.",
+  Technical:
+    "precise, detail-oriented, and skill-focused. Emphasize technical depth, methodologies, and systems. Use domain-appropriate terminology.",
+  Academic:
+    "formal, scholarly, and research-oriented. Highlight knowledge, publications, research, and academic achievements. Use formal sentence structure.",
+};
+
+export const rewriteWithTone = async ({ text, tone }) => {
+  const cleaned = validateText(text);
+
+  if (!TONE_DESCRIPTIONS[tone]) {
+    throw new Error(`Unknown tone: ${tone}`);
+  }
+
+  const ai = createAIClient();
+
+  const prompt = `
+You are a professional resume editor.
+
+Rewrite the following resume text in a ${tone} tone.
+
+${tone} tone means: ${TONE_DESCRIPTIONS[tone]}
+
+IMPORTANT RULES:
+1. Do NOT invent any new information, companies, titles, or metrics.
+2. Preserve all factual content from the original.
+3. Do NOT use emojis.
+4. Do NOT add headings or bullet points unless they already exist.
+5. Do NOT explain your changes.
+6. Return ONLY the rewritten text.
+
+Original text:
+--------------------
+${cleaned}
+--------------------
+
+Return only the rewritten version.
+`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: { temperature: 0.6 },
+  });
+
+  if (!response?.text) throw new Error("Gemini returned an empty response.");
+
+  return cleanText(response.text);
+};
+
+
+/* =========================================================
+   ACTION VERB SWAPPER
+   ========================================================= */
+
+export const suggestActionVerbs = async ({ text }) => {
+  const cleaned = validateText(text);
+
+  const ai = createAIClient();
+
+  const prompt = `
+You are a professional resume editor specializing in impactful language.
+
+Analyze the following resume text and identify weak, passive, or vague phrases that could be replaced with stronger action verbs or phrasing.
+
+Rules:
+1. Only flag genuinely weak or passive phrases (e.g. "helped with", "was responsible for", "worked on", "assisted in").
+2. Do NOT flag phrases that are already strong.
+3. Suggest one specific, stronger replacement for each flagged phrase.
+4. Keep each suggestion concise (a few words that directly replace the original phrase).
+5. Return ONLY valid JSON.
+
+Return JSON in this exact shape:
+{
+  "suggestions": [
+    { "original": "helped with reporting", "replacement": "Produced" },
+    { "original": "was responsible for", "replacement": "Managed" }
+  ]
+}
+
+Resume text:
+--------------------
+${cleaned}
+--------------------
+`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.3,
+    },
+  });
+
+  if (!response?.text) throw new Error("Gemini returned an empty response.");
+
+  const data = parseJsonResponse(response.text);
+
+  if (!Array.isArray(data.suggestions)) return [];
+
+  return data.suggestions
+    .filter((s) => s?.original && s?.replacement)
+    .map((s) => ({
+      original: String(s.original).trim(),
+      replacement: String(s.replacement).trim(),
+    }));
+};
+
+
+/* =========================================================
+   ATS KEYWORD ANALYZER
+   ========================================================= */
+
+export const analyzeATS = async ({ resumeText, jobDescription }) => {
+  if (!resumeText?.trim()) throw new Error("Resume is empty.");
+  if (!jobDescription?.trim()) throw new Error("Please paste a job description.");
+
+  const ai = createAIClient();
+
+  const prompt = `
+You are an expert ATS (Applicant Tracking System) analyst and resume consultant.
+
+Compare the resume below against the job description and identify:
+1. Keywords and skills that appear in the job description but are MISSING from the resume.
+2. Keywords and skills that are present in BOTH the job description and resume.
+3. An overall ATS match score from 0 to 100 based on keyword overlap and relevance.
+
+Rules:
+- Focus on skills, tools, technologies, certifications, and domain-specific terms.
+- Ignore generic words like "team", "communication", "experience", "years".
+- Keep keyword items short (1–4 words each).
+- Be strict: only include something as "matched" if it genuinely appears in the resume.
+- Return ONLY valid JSON.
+
+Return JSON in this exact shape:
+{
+  "score": 72,
+  "matched": ["React", "TypeScript", "REST APIs"],
+  "missing": ["GraphQL", "AWS", "CI/CD", "Docker"],
+  "tip": "Add a skills section that explicitly mentions the top 3–5 missing keywords."
+}
+
+RESUME:
+--------------------
+${resumeText.trim().slice(0, 3000)}
+--------------------
+
+JOB DESCRIPTION:
+--------------------
+${jobDescription.trim().slice(0, 2000)}
+--------------------
+`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.2,
+    },
+  });
+
+  if (!response?.text) throw new Error("Gemini returned an empty response.");
+
+  const data = parseJsonResponse(response.text);
+
+  return {
+    score: Math.min(100, Math.max(0, Number(data.score) || 0)),
+    matched: Array.isArray(data.matched) ? data.matched.map(String) : [],
+    missing: Array.isArray(data.missing) ? data.missing.map(String) : [],
+    tip: String(data.tip || ""),
+  };
 };
