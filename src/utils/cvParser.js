@@ -6,9 +6,12 @@ import { GoogleGenAI } from "@google/genai";
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
+// ================================
+// RESUME SCHEMA
+// ================================
+
 const resumeSchema = {
   type: "object",
-
   properties: {
     personal: {
       type: "object",
@@ -22,22 +25,9 @@ const resumeSchema = {
         photo: { type: "string" },
         title: { type: "string" },
       },
-      required: [
-        "fullname",
-        "email",
-        "phone",
-        "location",
-        "linkedin",
-        "website",
-        "photo",
-        "title",
-      ],
+      required: ["fullname", "email", "phone", "location", "linkedin", "website", "photo", "title"],
     },
-
-    summary: {
-      type: "string",
-    },
-
+    summary: { type: "string" },
     experience: {
       type: "array",
       items: {
@@ -48,22 +38,11 @@ const resumeSchema = {
           startDate: { type: "string" },
           endDate: { type: "string" },
           description: { type: "string" },
-          responsibilities: {
-            type: "array",
-            items: { type: "string" },
-          },
+          responsibilities: { type: "array", items: { type: "string" } },
         },
-        required: [
-          "company",
-          "position",
-          "startDate",
-          "endDate",
-          "description",
-          "responsibilities",
-        ],
+        required: ["company", "position", "startDate", "endDate", "description", "responsibilities"],
       },
     },
-
     education: {
       type: "array",
       items: {
@@ -75,37 +54,12 @@ const resumeSchema = {
           endDate: { type: "string" },
           description: { type: "string" },
         },
-        required: [
-          "institution",
-          "degree",
-          "startDate",
-          "endDate",
-          "description",
-        ],
+        required: ["institution", "degree", "startDate", "endDate", "description"],
       },
     },
-
-    skills: {
-      type: "array",
-      items: {
-        type: "string",
-      },
-    },
-
-    coreSkills: {
-      type: "array",
-      items: {
-        type: "string",
-      },
-    },
-
-    keyAchievements: {
-      type: "array",
-      items: {
-        type: "string",
-      },
-    },
-
+    skills: { type: "array", items: { type: "string" } },
+    coreSkills: { type: "array", items: { type: "string" } },
+    keyAchievements: { type: "array", items: { type: "string" } },
     certificates: {
       type: "array",
       items: {
@@ -121,7 +75,6 @@ const resumeSchema = {
         required: ["name", "issuer", "issueDate", "expiryDate", "credentialId", "credentialUrl"],
       },
     },
-
     languages: {
       type: "array",
       items: {
@@ -133,14 +86,7 @@ const resumeSchema = {
         required: ["language", "proficiency"],
       },
     },
-
-    hobbies: {
-      type: "array",
-      items: {
-        type: "string",
-      },
-    },
-
+    hobbies: { type: "array", items: { type: "string" } },
     additionalInformation: {
       type: "array",
       items: {
@@ -148,15 +94,11 @@ const resumeSchema = {
         properties: {
           heading: { type: "string" },
           content: { type: "string" },
-          bullets: {
-            type: "array",
-            items: { type: "string" },
-          },
+          bullets: { type: "array", items: { type: "string" } },
         },
         required: ["heading", "content", "bullets"],
       },
     },
-
     projects: {
       type: "array",
       items: {
@@ -167,214 +109,240 @@ const resumeSchema = {
           technologies: { type: "string" },
           link: { type: "string" },
         },
-        required: [
-          "name",
-          "description",
-          "technologies",
-          "link",
-        ],
+        required: ["name", "description", "technologies", "link"],
       },
     },
   },
-
+  // certificates, languages, hobbies are now required so Gemini cannot omit them
   required: [
-    "personal",
-    "summary",
-    "experience",
-    "education",
-    "skills",
-    "coreSkills",
-    "keyAchievements",
-    "projects",
-    "additionalInformation",
+    "personal", "summary", "experience", "education",
+    "skills", "coreSkills", "keyAchievements",
+    "certificates", "languages", "hobbies",
+    "projects", "additionalInformation",
   ],
 };
 
 // ================================
-// EXTRACT PDF TEXT
+// PDF/DOCX TEXT EXTRACTION
 // ================================
 
 const extractPdfText = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
-
-  const pdf = await pdfjsLib.getDocument({
-    data: arrayBuffer,
-  }).promise;
-
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let fullText = "";
-
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
-
     const content = await page.getTextContent();
-
-    const pageText = content.items
-      .map((item) => item.str)
-      .join(" ");
-
-    fullText += pageText + "\n\n";
+    fullText += content.items.map((item) => item.str).join(" ") + "\n\n";
   }
-
   return fullText;
 };
 
-// ================================
-// EXTRACT DOCX TEXT
-// ================================
-
 const extractDocxText = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
-
-  const result = await mammoth.extractRawText({
-    arrayBuffer,
-  });
-
+  const result = await mammoth.extractRawText({ arrayBuffer });
   return result.value;
 };
 
-// ================================
-// EXTRACT FILE TEXT
-// ================================
-
 const extractFileText = async (file) => {
-  const extension = file.name
-    .split(".")
-    .pop()
-    .toLowerCase();
-
-  if (extension === "pdf") {
-    return await extractPdfText(file);
-  }
-
-  if (extension === "docx") {
-    return await extractDocxText(file);
-  }
-
+  const extension = file.name.split(".").pop().toLowerCase();
+  if (extension === "pdf") return await extractPdfText(file);
+  if (extension === "docx") return await extractDocxText(file);
   if (extension === "doc") {
-    throw new Error(
-      "Old .doc files are not supported directly in the browser. Please save the CV as .docx or PDF."
-    );
+    throw new Error("Old .doc files are not supported. Please save as .docx or PDF.");
   }
-
   throw new Error("Unsupported file format.");
 };
 
 // ================================
-// SEMANTIC NORMALIZATION
-// Reclassifies information that Gemini may have placed in the wrong field.
-// This runs AFTER Gemini extraction as a post-processing step.
+// NORMALIZATION CONSTANTS
 // ================================
 
-/**
- * Detects if a string looks like a language entry.
- * Examples: "English – Native", "Hindi (Fluent)", "French"
- */
 const KNOWN_LANGUAGES = new Set([
   "english", "hindi", "urdu", "french", "german", "spanish", "italian", "portuguese",
-  "arabic", "chinese", "mandarin", "japanese", "korean", "russian", "turkish",
+  "arabic", "chinese", "mandarin", "cantonese", "japanese", "korean", "russian", "turkish",
   "dutch", "swedish", "norwegian", "danish", "finnish", "polish", "romanian",
   "hungarian", "greek", "hebrew", "persian", "farsi", "punjabi", "bengali",
   "tamil", "telugu", "kannada", "malayalam", "marathi", "gujarati", "swahili",
+  "vietnamese", "thai", "malay", "indonesian", "tagalog", "ukrainian", "czech",
+  "slovak", "bulgarian", "serbian", "croatian", "slovenian", "latvian", "lithuanian",
 ]);
 
 const PROFICIENCY_WORDS = new Set([
   "native", "fluent", "proficient", "intermediate", "basic", "beginner",
   "advanced", "conversational", "professional", "mother tongue", "bilingual",
   "c1", "c2", "b1", "b2", "a1", "a2",
+  "elementary", "upper intermediate", "working proficiency", "business level",
+  "full professional",
 ]);
 
-const looksLikeLanguage = (text) => {
-  const lower = text.toLowerCase().trim();
-  // If the entire text is a known language name
-  if (KNOWN_LANGUAGES.has(lower)) return true;
-  // If text contains a known language + proficiency separator
-  const parts = lower.split(/[-–—()/,]/);
-  const hasLanguage = parts.some(p => KNOWN_LANGUAGES.has(p.trim()));
-  const hasProficiency = parts.some(p => PROFICIENCY_WORDS.has(p.trim()));
-  return hasLanguage && (hasProficiency || parts.length === 1);
-};
-
-/**
- * Parses a language string into { language, proficiency } object.
- * Handles: "English – Native", "Hindi (Fluent)", "English", "French - B2"
- */
-const parseLanguageEntry = (text) => {
-  const separatorMatch = text.match(/^([^–—\-(]+)\s*[-–—(]\s*([^)]+)\)?$/);
-  if (separatorMatch) {
-    return {
-      language: separatorMatch[1].trim(),
-      proficiency: separatorMatch[2].trim().replace(/\)$/, ""),
-    };
-  }
-  return { language: text.trim(), proficiency: "" };
-};
-
-/**
- * Detects if text looks like a certificate/certification.
- */
-const CERT_KEYWORDS = [
-  "certified", "certification", "certificate", "aws", "azure", "gcp", "google cloud",
-  "microsoft", "pmp", "cissp", "cpa", "cfa", "six sigma", "prince2", "itil",
-  "comptia", "cisco", "ccna", "ccnp", "rhce", "java", "oracle", "scrum", "agile",
-];
-
-const looksLikeCertificate = (text) => {
-  const lower = text.toLowerCase();
-  return CERT_KEYWORDS.some(kw => lower.includes(kw));
-};
-
-/**
- * Detects if a heading/content block looks like it belongs in a specific field.
- * Returns the target field name or null if no strong match.
- */
-const SKILL_HEADINGS = new Set([
-  "technical expertise", "technical skills", "technical stack", "technologies",
-  "tools", "skills", "core skills", "competencies", "areas of expertise",
-  "technical competencies", "key skills", "professional skills", "it skills",
-  "programming languages", "frameworks", "software", "tools and technologies",
+const CERT_EXPLICIT_KEYWORDS = ["certified", "certification", "certificate"];
+const CERT_KNOWN_ACRONYMS = new Set([
+  "pmp", "cissp", "cpa", "cfa", "cism", "cisa", "ccna", "ccnp", "ccie",
+  "rhce", "rhcsa", "mcsa", "mcse", "aws", "gcp", "prince2", "itil",
+  "comptia", "togaf", "capm", "csm", "safe",
 ]);
 
-const ACHIEVEMENT_HEADINGS = new Set([
-  "highlights", "career highlights", "key highlights", "accomplishments",
-  "major achievements", "awards", "awards and honors", "recognition",
-  "notable achievements", "key wins", "wins", "notable accomplishments",
-]);
-
-const EXPERIENCE_HEADINGS = new Set([
-  "professional background", "career history", "employment history",
-  "work history", "professional experience", "career experience",
-  "work experience", "employment", "professional history",
-]);
-
-const PROJECT_HEADINGS = new Set([
-  "selected work", "portfolio", "major projects", "selected projects",
-  "key projects", "personal projects", "open source", "notable projects",
-]);
-
-const EDUCATION_HEADINGS = new Set([
-  "academic background", "academic history", "educational background",
-  "qualifications", "academic qualifications", "academic credentials",
-  "education and training",
+const SOFT_SKILLS = new Set([
+  "leadership", "communication", "team management", "problem solving",
+  "project management", "strategic planning", "teamwork", "adaptability",
+  "critical thinking", "time management", "conflict resolution",
+  "emotional intelligence", "creativity", "decision making", "mentoring",
+  "coaching", "negotiation", "presentation", "public speaking",
+  "interpersonal skills", "collaboration", "analytical thinking",
+  "organizational skills", "people management", "stakeholder management",
 ]);
 
 const LANGUAGE_HEADINGS = new Set([
   "languages", "language skills", "spoken languages", "linguistic skills",
+  "language proficiency", "languages spoken",
 ]);
-
 const CERTIFICATE_HEADINGS = new Set([
   "certifications", "certificates", "professional certifications",
-  "licenses", "credentials", "accreditations",
+  "licenses", "credentials", "accreditations", "qualifications",
+  "professional qualifications", "professional development",
 ]);
-
+const SKILL_HEADINGS = new Set([
+  "technical expertise", "technical skills", "technical stack", "technologies",
+  "tools", "skills", "areas of expertise", "technical competencies",
+  "key skills", "professional skills", "it skills", "programming languages",
+  "frameworks", "software", "tools and technologies", "core competencies",
+  "expertise", "technical knowledge", "technical proficiency",
+]);
+const ACHIEVEMENT_HEADINGS = new Set([
+  "highlights", "career highlights", "key highlights", "accomplishments",
+  "major achievements", "awards", "awards and honors", "recognition",
+  "notable achievements", "key wins", "wins", "notable accomplishments",
+  "achievements", "key achievements",
+]);
 const HOBBY_HEADINGS = new Set([
   "hobbies", "interests", "hobbies and interests", "personal interests",
-  "extracurricular", "activities",
+  "extracurricular", "activities", "personal activities",
 ]);
 
+// ================================
+// NORMALIZATION HELPERS
+// ================================
+
+const capitalize = (str) => {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+const normLangKey = (lang) => lang?.toLowerCase()?.trim() || "";
+
 /**
- * Main normalization function. Takes raw Gemini output and reclassifies
- * any information that ended up in the wrong field.
+ * Detects if a SHORT string (single item/bullet) is a language entry.
+ * Uses Unicode escape for em-dash (\u2013, \u2014) to avoid encoding issues.
  */
+const looksLikeLanguage = (text) => {
+  if (!text || text.length > 80) return false;
+  const lower = text.toLowerCase().trim();
+  if (KNOWN_LANGUAGES.has(lower)) return true;
+
+  // Split on separators: -, en-dash, em-dash, (, ), |, /, :, ,
+  const separatorParts = lower.split(/\s*[-\u2013\u2014()|\/\:,]\s*/);
+  const hasLanguage = separatorParts.some(p => KNOWN_LANGUAGES.has(p.trim()));
+  const hasProficiency = separatorParts.some(p => PROFICIENCY_WORDS.has(p.trim()));
+  if (hasLanguage && hasProficiency) return true;
+
+  // "Fluent in English", "Native English speaker"
+  const inMatch = /\b(fluent|native|proficient|intermediate|advanced|conversational|basic)\s+in\s+(\w+)/i.exec(lower);
+  if (inMatch && KNOWN_LANGUAGES.has(inMatch[2])) return true;
+  const nativeMatch = /\b(\w+)\s+(native|speaker)\b/i.exec(lower);
+  if (nativeMatch && KNOWN_LANGUAGES.has(nativeMatch[1])) return true;
+
+  return false;
+};
+
+/**
+ * Parses a SHORT language string into { language, proficiency }.
+ */
+const parseLanguageEntry = (text) => {
+  // Separator: "English - Native", "French (B2)", "Hindi | Fluent"
+  const sepMatch = text.match(/^([^\u2013\u2014\-(|\/:,]+)\s*[-\u2013\u2014(|\/:,]\s*([^)]+)\)?$/);
+  if (sepMatch) {
+    return {
+      language: capitalize(sepMatch[1].trim()),
+      proficiency: capitalize(sepMatch[2].trim().replace(/\)$/, "").trim()),
+    };
+  }
+  // "Fluent in English"
+  const inMatch = /\b(fluent|native|proficient|intermediate|advanced|conversational|basic)\s+in\s+(\w+)/i.exec(text);
+  if (inMatch && KNOWN_LANGUAGES.has(inMatch[2].toLowerCase())) {
+    return { language: capitalize(inMatch[2]), proficiency: capitalize(inMatch[1]) };
+  }
+  // Scan for known language
+  const lower = text.toLowerCase();
+  for (const lang of KNOWN_LANGUAGES) {
+    if (lower.includes(lang)) {
+      const idx = lower.indexOf(lang);
+      const detectedLang = capitalize(text.substring(idx, idx + lang.length));
+      for (const prof of PROFICIENCY_WORDS) {
+        if (lower.includes(prof)) {
+          const pidx = lower.indexOf(prof);
+          return { language: detectedLang, proficiency: capitalize(text.substring(pidx, pidx + prof.length)) };
+        }
+      }
+      return { language: detectedLang, proficiency: "" };
+    }
+  }
+  return { language: capitalize(text.trim()), proficiency: "" };
+};
+
+/**
+ * Extract language entries from a PARAGRAPH.
+ * Returns { language, proficiency }[] without modifying the source text.
+ */
+const extractLanguagesFromParagraph = (text) => {
+  if (!text || typeof text !== "string") return [];
+  const found = [];
+
+  // "Fluent in English and Hindi"
+  const inPattern = /\b(fluent|native|proficient|intermediate|advanced|conversational|basic)\s+in\s+((?:\w+(?:\s+and\s+)?)+)/gi;
+  let match;
+  while ((match = inPattern.exec(text)) !== null) {
+    const proficiency = capitalize(match[1]);
+    const langs = match[2].split(/\s+and\s+/i).map(l => l.trim()).filter(Boolean);
+    langs.forEach(lang => {
+      if (KNOWN_LANGUAGES.has(lang.toLowerCase())) {
+        found.push({ language: capitalize(lang), proficiency });
+      }
+    });
+  }
+
+  // "English - Native", "Hindi (Fluent)" inline in paragraph
+  const sepPattern = /\b([A-Z][a-z]+)\s*[-\u2013\u2014(|\/:]\s*(native|fluent|proficient|intermediate|advanced|conversational|basic|c[12]|b[12]|a[12])\b/g;
+  while ((match = sepPattern.exec(text)) !== null) {
+    const lang = match[1].trim();
+    const prof = match[2].trim();
+    if (KNOWN_LANGUAGES.has(lang.toLowerCase())) {
+      found.push({ language: capitalize(lang), proficiency: capitalize(prof) });
+    }
+  }
+
+  return found;
+};
+
+/**
+ * High-confidence certificate detection for short strings.
+ * Only matches explicit certification language or known acronyms.
+ * Does NOT match plain technology names like "java" or "python".
+ */
+const looksLikeCertificate = (text) => {
+  if (!text || text.length > 150) return false;
+  const lower = text.toLowerCase().trim();
+  if (CERT_EXPLICIT_KEYWORDS.some(kw => lower.includes(kw))) return true;
+  for (const acronym of CERT_KNOWN_ACRONYMS) {
+    if (new RegExp(`\\b${acronym}\\b`).test(lower)) return true;
+  }
+  return false;
+};
+
+// ================================
+// MAIN NORMALIZATION
+// ================================
+
 const normalizeResumeData = (raw) => {
   const data = { ...raw };
 
@@ -386,328 +354,365 @@ const normalizeResumeData = (raw) => {
   data.keyAchievements = Array.isArray(data.keyAchievements) ? [...data.keyAchievements] : [];
   data.hobbies = Array.isArray(data.hobbies) ? [...data.hobbies] : [];
   data.additionalInformation = Array.isArray(data.additionalInformation) ? [...data.additionalInformation] : [];
+  data.experience = Array.isArray(data.experience) ? data.experience : [];
+  data.education = Array.isArray(data.education) ? data.education : [];
 
-  // Track what has been "claimed" to avoid duplicates
-  const claimedTexts = new Set();
+  // Deduplication registries (seeded from Gemini's output)
+  const langReg = new Set(data.languages.map(l => normLangKey(l.language)));
+  const certReg = new Set(data.certificates.map(c => c.name?.toLowerCase()?.trim()));
+  const skillReg = new Set([
+    ...data.skills.map(s => String(s).toLowerCase().trim()),
+    ...data.coreSkills.map(s => String(s).toLowerCase().trim()),
+  ]);
+  const achieveReg = new Set(data.keyAchievements.map(a => String(a).toLowerCase().trim()));
+  const hobbyReg = new Set(data.hobbies.map(h => String(h).toLowerCase().trim()));
 
-  // Register already-extracted items so we don't duplicate them
-  data.languages.forEach(l => claimedTexts.add(l.language?.toLowerCase()));
-  data.certificates.forEach(c => claimedTexts.add(c.name?.toLowerCase()));
-  data.skills.forEach(s => claimedTexts.add(String(s).toLowerCase()));
-  data.coreSkills.forEach(s => claimedTexts.add(String(s).toLowerCase()));
-  data.keyAchievements.forEach(a => claimedTexts.add(String(a).toLowerCase()));
+  // Safe adders - idempotent, deduplication-aware
+  const addLang = (lang, prof = "") => {
+    const key = normLangKey(lang);
+    if (!key || langReg.has(key)) return false;
+    langReg.add(key);
+    data.languages.push({ language: capitalize(lang), proficiency: prof ? capitalize(prof) : "" });
+    return true;
+  };
+  const addCert = (name) => {
+    const key = name?.toLowerCase()?.trim();
+    if (!key || certReg.has(key)) return false;
+    certReg.add(key);
+    data.certificates.push({ name: name.trim(), issuer: "", issueDate: "", expiryDate: "", credentialId: "", credentialUrl: "" });
+    return true;
+  };
+  const addSkill = (skill) => {
+    const key = skill?.toLowerCase()?.trim();
+    if (!key || skillReg.has(key)) return false;
+    skillReg.add(key);
+    data.skills.push(skill.trim());
+    return true;
+  };
+  const addCoreSkill = (skill) => {
+    const key = skill?.toLowerCase()?.trim();
+    if (!key || skillReg.has(key)) return false;
+    skillReg.add(key);
+    data.coreSkills.push(skill.trim());
+    return true;
+  };
+  const addHobby = (h) => {
+    const key = h?.toLowerCase()?.trim();
+    if (!key || hobbyReg.has(key)) return false;
+    hobbyReg.add(key);
+    data.hobbies.push(h.trim());
+    return true;
+  };
+  const addAchievement = (a) => {
+    const key = a?.toLowerCase()?.trim();
+    if (!key || achieveReg.has(key)) return false;
+    achieveReg.add(key);
+    data.keyAchievements.push(a.trim());
+    return true;
+  };
 
-  // Process each additionalInformation block to reclassify its contents
+  // STEP 1: Normalize experience.responsibilities to arrays
+  data.experience = data.experience.map(exp => ({
+    ...exp,
+    responsibilities: Array.isArray(exp.responsibilities)
+      ? exp.responsibilities
+      : (typeof exp.responsibilities === "string"
+        ? exp.responsibilities.split("\n").map(s => s.trim()).filter(Boolean)
+        : []),
+  }));
+
+  // STEP 2: Move soft skills from skills[] to coreSkills[]
+  for (let i = data.skills.length - 1; i >= 0; i--) {
+    const skill = data.skills[i];
+    if (SOFT_SKILLS.has(skill.toLowerCase().trim())) {
+      data.skills.splice(i, 1);
+      skillReg.delete(skill.toLowerCase().trim());
+      addCoreSkill(skill);
+    }
+  }
+
+  // STEP 3: Cross-field paragraph scanning
+  // Additive — extracts languages from paragraphs without touching the source text.
+  const scanParagraph = (text) => {
+    if (!text || typeof text !== "string") return;
+    extractLanguagesFromParagraph(text).forEach(({ language, proficiency }) => addLang(language, proficiency));
+  };
+
+  scanParagraph(data.summary);
+  data.experience.forEach(exp => {
+    scanParagraph(exp.description);
+    if (Array.isArray(exp.responsibilities)) {
+      exp.responsibilities.forEach(r => {
+        // Single responsibility bullet that is itself a language entry
+        if (looksLikeLanguage(r)) {
+          const parsed = parseLanguageEntry(r);
+          addLang(parsed.language, parsed.proficiency);
+        }
+      });
+    }
+  });
+
+  // STEP 4: Reclassify additionalInformation blocks
   const remainingBlocks = [];
 
   for (const block of data.additionalInformation) {
     const headingLower = (block.heading || "").toLowerCase().trim();
     const content = (block.content || "").trim();
-    const bullets = Array.isArray(block.bullets) ? block.bullets.filter(b => b.trim()) : [];
+    const bullets = Array.isArray(block.bullets) ? block.bullets.filter(b => b && b.trim()) : [];
 
-    // ── Language headings ───────────────────────────────────────────────
+    const tryRescueItems = (items, rescueFn) => {
+      let rescued = false;
+      for (const item of items) {
+        if (rescueFn(item)) rescued = true;
+      }
+      return rescued;
+    };
+
+    const sourceItems = bullets.length
+      ? bullets
+      : content.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+    const sourceItemsSemi = bullets.length
+      ? bullets
+      : content.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+
+    // Heading-based rescue
     if (LANGUAGE_HEADINGS.has(headingLower)) {
-      // Extract languages from content or bullets
-      const lines = bullets.length
-        ? bullets
-        : content.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-
-      let extractedSomething = false;
-      for (const line of lines) {
-        if (looksLikeLanguage(line) && !claimedTexts.has(line.toLowerCase())) {
-          const parsed = parseLanguageEntry(line);
-          data.languages.push(parsed);
-          claimedTexts.add(parsed.language.toLowerCase());
-          extractedSomething = true;
-        }
-      }
-      if (extractedSomething) continue; // Don't add to remainingBlocks
+      const rescued = tryRescueItems(sourceItems, (item) => {
+        if (!looksLikeLanguage(item)) return false;
+        const parsed = parseLanguageEntry(item);
+        return addLang(parsed.language, parsed.proficiency);
+      });
+      if (rescued) continue;
     }
 
-    // ── Certificate headings ─────────────────────────────────────────────
     if (CERTIFICATE_HEADINGS.has(headingLower)) {
-      const lines = bullets.length
-        ? bullets
-        : content.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-
-      let extractedSomething = false;
-      for (const line of lines) {
-        if (!claimedTexts.has(line.toLowerCase())) {
-          data.certificates.push({ name: line, issuer: "", issueDate: "", expiryDate: "", credentialId: "", credentialUrl: "" });
-          claimedTexts.add(line.toLowerCase());
-          extractedSomething = true;
-        }
-      }
-      if (extractedSomething) continue;
+      if (tryRescueItems(sourceItemsSemi, addCert)) continue;
     }
 
-    // ── Skill headings ────────────────────────────────────────────────────
     if (SKILL_HEADINGS.has(headingLower)) {
-      const lines = bullets.length
-        ? bullets
-        : content.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-
-      let extractedSomething = false;
-      for (const line of lines) {
-        if (line && !claimedTexts.has(line.toLowerCase())) {
-          data.skills.push(line);
-          claimedTexts.add(line.toLowerCase());
-          extractedSomething = true;
-        }
-      }
-      if (extractedSomething) continue;
+      const rescued = tryRescueItems(sourceItems, (item) => {
+        if (!item) return false;
+        return SOFT_SKILLS.has(item.toLowerCase()) ? addCoreSkill(item) : addSkill(item);
+      });
+      if (rescued) continue;
     }
 
-    // ── Achievement headings ─────────────────────────────────────────────
     if (ACHIEVEMENT_HEADINGS.has(headingLower)) {
-      const lines = bullets.length
-        ? bullets
-        : content.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-
-      let extractedSomething = false;
-      for (const line of lines) {
-        if (line && !claimedTexts.has(line.toLowerCase())) {
-          data.keyAchievements.push(line);
-          claimedTexts.add(line.toLowerCase());
-          extractedSomething = true;
-        }
-      }
-      if (extractedSomething) continue;
+      if (tryRescueItems(sourceItemsSemi, addAchievement)) continue;
     }
 
-    // ── Hobby headings ───────────────────────────────────────────────────
     if (HOBBY_HEADINGS.has(headingLower)) {
-      const lines = bullets.length
-        ? bullets
-        : content.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-
-      let extractedSomething = false;
-      for (const line of lines) {
-        if (line && !claimedTexts.has(line.toLowerCase())) {
-          data.hobbies.push(line);
-          claimedTexts.add(line.toLowerCase());
-          extractedSomething = true;
-        }
-      }
-      if (extractedSomething) continue;
+      if (tryRescueItems(sourceItems, addHobby)) continue;
     }
 
-    // ── Generic bullet-only scan (no heading match) ──────────────────────
-    // Check individual bullets to see if they belong to a structured field
-    if (!LANGUAGE_HEADINGS.has(headingLower) && !CERTIFICATE_HEADINGS.has(headingLower)) {
-      const unclaimedBullets = [];
-      const claimedLanguageBullets = [];
-      const claimedCertBullets = [];
-
-      for (const bullet of bullets) {
-        if (claimedTexts.has(bullet.toLowerCase())) {
-          continue; // Already exists elsewhere
-        }
-        if (looksLikeLanguage(bullet)) {
-          const parsed = parseLanguageEntry(bullet);
-          data.languages.push(parsed);
-          claimedTexts.add(parsed.language.toLowerCase());
-          claimedLanguageBullets.push(bullet);
-        } else if (looksLikeCertificate(bullet)) {
-          data.certificates.push({ name: bullet, issuer: "", issueDate: "", expiryDate: "", credentialId: "", credentialUrl: "" });
-          claimedTexts.add(bullet.toLowerCase());
-          claimedCertBullets.push(bullet);
-        } else {
-          unclaimedBullets.push(bullet);
-        }
-      }
-
-      // If all bullets were reclassified and there's no text content, skip block
-      if (unclaimedBullets.length === 0 && !content && (claimedLanguageBullets.length + claimedCertBullets.length) === bullets.length) {
-        continue;
-      }
-
-      // Keep block with only the unclaimed bullets remaining
-      if (unclaimedBullets.length !== bullets.length) {
-        remainingBlocks.push({ ...block, bullets: unclaimedBullets });
-        continue;
+    // Bullet-level semantic scan for unrecognized / mixed headings
+    // High-confidence items go to structured fields.
+    // Ambiguous items stay in additionalInformation.
+    const unclaimedBullets = [];
+    for (const bullet of bullets) {
+      if (looksLikeLanguage(bullet)) {
+        const parsed = parseLanguageEntry(bullet);
+        addLang(parsed.language, parsed.proficiency);
+      } else if (looksLikeCertificate(bullet)) {
+        addCert(bullet);
+      } else if (SOFT_SKILLS.has(bullet.toLowerCase().trim())) {
+        addCoreSkill(bullet);
+      } else {
+        unclaimedBullets.push(bullet); // Cannot classify confidently - preserve
       }
     }
 
-    // Block doesn't match any reclassification rule — keep as-is
-    remainingBlocks.push(block);
+    // Scan paragraph content for languages (additive)
+    scanParagraph(content);
+
+    // Keep block only if it has remaining information
+    if (content || unclaimedBullets.length > 0) {
+      remainingBlocks.push({
+        heading: block.heading || "",
+        content: content,
+        bullets: unclaimedBullets,
+      });
+    }
   }
 
   data.additionalInformation = remainingBlocks;
 
-  // Normalize experience — ensure responsibilities is always an array
-  if (Array.isArray(data.experience)) {
-    data.experience = data.experience.map(exp => ({
-      ...exp,
-      responsibilities: Array.isArray(exp.responsibilities)
-        ? exp.responsibilities
-        : (typeof exp.responsibilities === "string"
-          ? exp.responsibilities.split("\n").map(s => s.trim()).filter(Boolean)
-          : []),
-    }));
-  }
+  // STEP 5: Final deduplication across all string arrays
+  const dedupeStr = (arr) => {
+    const seen = new Set();
+    return arr.filter(item => {
+      const key = String(item).toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
-  // Normalize additionalInformation — backward compat: if old data has 'text' field, alias to content
-  data.additionalInformation = data.additionalInformation.map(item => ({
-    heading: item.heading || "",
-    content: item.content || item.text || "",
-    bullets: Array.isArray(item.bullets) ? item.bullets : [],
-  }));
+  data.skills = dedupeStr(data.skills);
+  data.coreSkills = dedupeStr(data.coreSkills);
+  data.keyAchievements = dedupeStr(data.keyAchievements);
+  data.hobbies = dedupeStr(data.hobbies);
+
+  const seenLangs = new Set();
+  data.languages = data.languages.filter(l => {
+    const key = normLangKey(l.language);
+    if (!key || seenLangs.has(key)) return false;
+    seenLangs.add(key);
+    return true;
+  });
+
+  const seenCerts = new Set();
+  data.certificates = data.certificates.filter(c => {
+    const key = c.name?.toLowerCase()?.trim();
+    if (!key || seenCerts.has(key)) return false;
+    seenCerts.add(key);
+    return true;
+  });
 
   return data;
 };
 
 // ================================
-// SEND TEXT TO GEMINI
+// GEMINI PROMPT
+// ================================
+
+const buildPrompt = (resumeText) => `
+You are an expert CV/resume information extractor. Produce a structured JSON object containing ALL meaningful information from the CV text below.
+
+EXTRACTION PHILOSOPHY
+Think in two stages:
+STAGE 1 - UNDERSTAND ALL CONTENT: Read every line. Identify every piece of meaningful information regardless of which section heading it appears under.
+STAGE 2 - CLASSIFY BY MEANING: Place each piece into the correct schema field based on its CONTENT, not its heading. A heading is only a hint.
+
+STRICT RULES
+1. NEVER lose information. If something cannot be confidently classified, put it in additionalInformation.
+2. NEVER flatten bullet points into a paragraph. Keep them as arrays.
+3. NEVER invent, guess, or hallucinate data not in the CV.
+4. PRESERVE original text. If a language appears in the summary, keep the full summary AND also add the language to languages[].
+5. NEVER put a heading on an additionalInformation block if the original CV has no heading there.
+
+CLASSIFICATION RULES
+
+LANGUAGES - languages[]
+A language entry is a human language name (English, Hindi, French...) optionally with a proficiency level (Native, Fluent, B2, C1...).
+Extract EVERY language entry from ANY section.
+Patterns: "English - Native", "Hindi (Fluent)", "Fluent in English", "French | B2"
+Even if buried in Additional Information, Skills, or Summary - extract to languages[].
+Format: { language: "English", proficiency: "Native" }
+If no proficiency stated, use proficiency: ""
+
+CERTIFICATIONS - certificates[]
+A certification is a professionally earned credential.
+Strong signals: words Certified, Certification, Certificate appear.
+Known acronyms: AWS, PMP, CISSP, CCNA, CCNP, CPA, CFA, ITIL, Prince2, CompTIA, GCP
+DO NOT treat plain technology skills like Python, React, Java as certifications.
+Extract from any section. Only fill issuer/issueDate/credentialId/credentialUrl if explicitly stated; otherwise use "".
+
+SKILLS - skills[]
+Technical and hard skills: programming languages, frameworks, databases, tools, platforms.
+
+CORE SKILLS - coreSkills[]
+Leadership and soft skills: Leadership, Communication, Project Management, Teamwork, Strategic Planning, Problem Solving.
+DO NOT put soft skills inside skills[]. Separate them by meaning.
+DO NOT put languages inside skills[].
+
+KEY ACHIEVEMENTS - keyAchievements[]
+Quantified outcomes and notable accomplishments. Example: "Increased revenue by 35%", "Led a team of 12".
+
+EXPERIENCE - experience[]
+Work history entries. responsibilities MUST be an array of strings, NEVER a single paragraph.
+
+EDUCATION - education[]
+Degrees, diplomas, schools.
+
+PROJECTS - projects[]
+Distinct scoped projects with a project name. Do NOT turn job responsibilities into projects.
+
+HOBBIES - hobbies[]
+Personal interests.
+
+additionalInformation[]
+Use ONLY for genuinely uncategorized content: work authorization, references, volunteer work, publications.
+heading: original heading if present, else ""
+content: paragraph text if any, else ""
+bullets: array of bullet strings if any, else []
+NEVER invent a heading or content that is not in the original CV.
+
+SELF-CHECK BEFORE OUTPUT
+1. Did every language entry end up in languages[]?
+2. Did every certification end up in certificates[]?
+3. Are responsibilities arrays (not paragraphs)?
+4. Is any information lost?
+5. Are skills and coreSkills separated correctly?
+
+CV TEXT:
+${resumeText}
+`;
+
+// ================================
+// GEMINI API CALL
 // ================================
 
 const analyzeResumeText = async (resumeText) => {
-
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
   if (!apiKey) {
-    throw new Error(
-      "Gemini API key is missing. Add VITE_GEMINI_API_KEY to your .env file."
-    );
+    throw new Error("Gemini API key is missing. Add VITE_GEMINI_API_KEY to your .env file.");
   }
 
-  const ai = new GoogleGenAI({
-    apiKey,
-  });
+  const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `
-You are an expert CV/resume information extractor with semantic understanding.
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: buildPrompt(resumeText),
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: resumeSchema,
+      },
+    });
 
-Your task: Extract ALL meaningful information from the CV text below into the correct structured fields.
+    if (!response.text) {
+      throw new Error("AI returned an empty response.");
+    }
 
-CRITICAL RULES:
-1. Classify information by its MEANING and CONTENT, NOT by the heading it appears under.
-2. The heading "Additional Information" does NOT mean the content belongs in additionalInformation.
-   Inspect each item individually and place it in the correct field.
-3. NEVER lose information. Every meaningful piece must end up somewhere.
-4. NEVER flatten bullet point lists into a single paragraph.
-5. NEVER invent data not present in the CV.
-6. Use additionalInformation ONLY as a last resort for content that genuinely doesn't fit elsewhere.
-
-SEMANTIC CLASSIFICATION GUIDE:
-
-LANGUAGES → languages[]
-- Any human language (English, Hindi, French, etc.)
-- Proficiency levels (Native, Fluent, Intermediate, B2, etc.)
-- These may appear under ANY heading: "Additional Information", "Other Details", "Languages", etc.
-- Extract each language as: { language: "English", proficiency: "Native" }
-
-CERTIFICATIONS → certificates[]
-- Any professional certification, AWS/Azure/GCP cert, PMP, CISSP, etc.
-- May appear under "Additional Information", "Certifications", "Credentials", etc.
-- Extract as: { name: "AWS Certified Developer", issuer: "", issueDate: "", ... }
-
-SKILLS → skills[] or coreSkills[]
-- Technical skills: programming languages, frameworks, tools, technologies
-- Use skills[] for technical/hard skills
-- Use coreSkills[] for leadership/soft skills (e.g., "Leadership", "Communication", "Project Management")
-- May appear under: "Technical Expertise", "Technologies", "Competencies", "Skills", etc.
-
-KEY ACHIEVEMENTS → keyAchievements[]
-- Quantified accomplishments, awards, recognitions
-- May appear under: "Highlights", "Accomplishments", "Key Wins", "Awards", etc.
-- Each achievement = one string array item
-
-EXPERIENCE → experience[]
-- Any work experience, regardless of heading name
-- May appear under: "Professional Background", "Career History", "Work History", etc.
-- MUST preserve bullet points as responsibilities[] array, NEVER as a paragraph
-
-PROJECTS → projects[]
-- Personal, academic, or professional projects
-- May appear under: "Selected Work", "Portfolio", "Key Projects", etc.
-
-EDUCATION → education[]
-- Academic degrees, diplomas, courses
-- May appear under: "Academic Background", "Qualifications", etc.
-
-HOBBIES → hobbies[]
-- Personal interests, hobbies
-- May appear under: "Interests", "Hobbies", etc.
-
-additionalInformation[] — USE ONLY FOR:
-- Work authorization, visa status
-- Volunteer experience
-- Publications, conferences, talks
-- References
-- Any content that genuinely doesn't fit the above categories
-- When content is a mix of items, include only the uncategorized remainder
-
-FORMAT for additionalInformation:
-- heading: A descriptive heading (can be empty string if none)
-- content: Paragraph text (can be empty string)
-- bullets: Array of bullet points (can be empty array)
-- All three fields are OPTIONAL — only populate what exists
-
-EXPERIENCE BULLETS — CRITICAL:
-- responsibilities MUST be an array: ["Built X", "Managed Y", "Improved Z"]
-- NEVER: "Built X. Managed Y. Improved Z." (single string)
-- Preserve original bullet point text
-
-Resume text:
-
---------------------
-
-${resumeText}
-
---------------------
-`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3.5-flash",
-
-    contents: prompt,
-
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: resumeSchema,
-    },
-  });
-
-  if (!response.text) {
-    throw new Error("AI returned an empty response.");
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error("[cvParser] Gemini error:", error);
+    if (error?.status === 429 || error?.message?.includes("429")) {
+      throw new Error("API rate limit exceeded. Please wait a moment and try again.");
+    }
+    if (error instanceof SyntaxError) {
+      throw new Error("AI returned malformed JSON. Please try again.");
+    }
+    if (error?.message?.includes("API key")) {
+      throw new Error("Invalid Gemini API key. Please check your VITE_GEMINI_API_KEY.");
+    }
+    throw new Error(error.message || "Failed to analyze resume with Gemini.");
   }
-
-  return JSON.parse(response.text);
 };
 
 // ================================
-// MAIN FUNCTION
+// MAIN EXPORT
 // ================================
 
 export const parseCV = async (file) => {
+  if (!file) throw new Error("No CV file was provided.");
 
-  if (!file) {
-    throw new Error("No CV file was provided.");
-  }
-
-  console.log("Extracting CV text...");
-
+  console.log("[cvParser] Extracting text from:", file.name);
   const text = await extractFileText(file);
 
-  if (!text || text.trim().length < 20) {
+  if (!text || text.trim().length < 30) {
     throw new Error(
-      "Could not extract enough text from this CV."
+      "Could not extract enough text from this CV. The file may be image-based or password protected."
     );
   }
 
-  console.log("CV text extracted.");
-
-  console.log("Sending CV to Gemini...");
-
+  console.log("[cvParser] Sending to Gemini...");
   const rawData = await analyzeResumeText(text);
+  console.log("[cvParser] Raw Gemini response:", rawData);
 
-  console.log("Raw Gemini response:", rawData);
-
-  // Run semantic normalization to reclassify any misplaced information
   const resumeData = normalizeResumeData(rawData);
-
-  console.log("Resume information extracted and normalized:", resumeData);
+  console.log("[cvParser] Normalized resume data:", resumeData);
 
   return resumeData;
 };

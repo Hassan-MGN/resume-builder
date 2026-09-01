@@ -196,23 +196,31 @@ const Builder = () => {
       console.log( "Starting CV analysis...")
       const extractedResume = await parseCV(uploadedFile)
       console.log("Extracted resume:",extractedResume)
-      setResume({
+      setResume((prev) => ({
+        // Preserve existing layout settings
+        layout: prev?.layout,
         personal: {
-          fullname:extractedResume.personal?.fullname || "",
-          email:extractedResume.personal?.email || "",
+          fullname: extractedResume.personal?.fullname || "",
+          email: extractedResume.personal?.email || "",
           phone: extractedResume.personal?.phone || "",
-          location:extractedResume.personal?.location || "",
+          location: extractedResume.personal?.location || "",
           linkedin: extractedResume.personal?.linkedin || "",
           website: extractedResume.personal?.website || "",
-          photo:extractedResume.personal?.photo || "",
-          title:extractedResume.personal?.title || "",
+          photo: extractedResume.personal?.photo || "",
+          title: extractedResume.personal?.title || "",
         },
         summary: extractedResume.summary || "",
-        experience:Array.isArray( extractedResume.experience )? extractedResume.experience: [],
-        education: Array.isArray( extractedResume.education) ? extractedResume.education: [],
-        skills:Array.isArray(extractedResume.skills)? extractedResume.skills: [],
-        projects: Array.isArray( extractedResume.projects)? extractedResume.projects : [],   
-      });
+        experience: Array.isArray(extractedResume.experience) ? extractedResume.experience : [],
+        education: Array.isArray(extractedResume.education) ? extractedResume.education : [],
+        skills: Array.isArray(extractedResume.skills) ? extractedResume.skills : [],
+        coreSkills: Array.isArray(extractedResume.coreSkills) ? extractedResume.coreSkills : [],
+        keyAchievements: Array.isArray(extractedResume.keyAchievements) ? extractedResume.keyAchievements : [],
+        certificates: Array.isArray(extractedResume.certificates) ? extractedResume.certificates : [],
+        languages: Array.isArray(extractedResume.languages) ? extractedResume.languages : [],
+        hobbies: Array.isArray(extractedResume.hobbies) ? extractedResume.hobbies : [],
+        projects: Array.isArray(extractedResume.projects) ? extractedResume.projects : [],
+        additionalInformation: Array.isArray(extractedResume.additionalInformation) ? extractedResume.additionalInformation : [],
+      }));
       setMode("scratch")
     } catch (error) {
       console.error("CV analysis error:",error)
