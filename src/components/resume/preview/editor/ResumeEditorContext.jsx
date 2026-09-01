@@ -3,23 +3,37 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 const ResumeEditorContext = createContext(null);
 
 export const useResumeEditor = () => {
-  const context = useContext(ResumeEditorContext);
-  if (!context) {
-    throw new Error("useResumeEditor must be used within a ResumeEditorProvider");
-  }
-  return context;
+  return useContext(ResumeEditorContext) || null;
 };
 
 export const ResumeEditorProvider = ({ children, resume, setResume }) => {
   const [selectedElement, setSelectedElement] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [activeSection, setActiveSection] = useState(null);
+  const [activeEntryIndex, setActiveEntryIndex] = useState(null);
 
   const selectElement = useCallback((element) => {
     setSelectedElement(element);
+    
+    // Parse element id to determine active section and entry
+    if (element?.id) {
+      const parts = element.id.split('.');
+      setActiveSection(parts[0]);
+      if (parts.length > 1 && !isNaN(parseInt(parts[1], 10))) {
+        setActiveEntryIndex(parseInt(parts[1], 10));
+      } else {
+        setActiveEntryIndex(null);
+      }
+    } else {
+      setActiveSection(null);
+      setActiveEntryIndex(null);
+    }
   }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedElement(null);
+    setActiveSection(null);
+    setActiveEntryIndex(null);
   }, []);
 
   const updateElementStyle = useCallback((elementId, newStyles) => {
@@ -48,6 +62,37 @@ export const ResumeEditorProvider = ({ children, resume, setResume }) => {
     if (stored) return stored;
     return selectedElement.defaultFontSize || 14;
   }, [selectedElement, resume.layout]);
+
+  const addEntry = useCallback((sectionId, newEntry) => {
+    setResume((prev) => {
+      const currentList = Array.isArray(prev[sectionId]) ? prev[sectionId] : [];
+      return { ...prev, [sectionId]: [...currentList, newEntry] };
+    });
+  }, [setResume]);
+
+  const deleteEntry = useCallback((sectionId, index) => {
+    setResume((prev) => {
+      const currentList = Array.isArray(prev[sectionId]) ? prev[sectionId] : [];
+      const updatedList = [...currentList];
+      updatedList.splice(index, 1);
+      return { ...prev, [sectionId]: updatedList };
+    });
+    // If the deleted entry was currently selected, clear selection
+    if (activeSection === sectionId && activeEntryIndex === index) {
+      clearSelection();
+    }
+  }, [setResume, activeSection, activeEntryIndex, clearSelection]);
+
+  const deleteSection = useCallback((sectionId) => {
+    setResume((prev) => {
+      const currentOrder = prev.layout?.sectionOrder || [];
+      const updatedOrder = currentOrder.filter(id => id !== sectionId);
+      return { ...prev, layout: { ...prev.layout, sectionOrder: updatedOrder } };
+    });
+    if (activeSection === sectionId) {
+      clearSelection();
+    }
+  }, [setResume, activeSection, clearSelection]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -119,7 +164,12 @@ export const ResumeEditorProvider = ({ children, resume, setResume }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedElement, resume.layout, updateElementStyle, updateSectionLayout]);
 
-  const value = { selectedElement, selectElement, clearSelection, updateElementStyle, updateSectionLayout, getSelectedFontSize, isExporting, setIsExporting, resume, setResume,};
+  const value = { 
+    selectedElement, selectElement, clearSelection, updateElementStyle, updateSectionLayout, getSelectedFontSize, 
+    isExporting, setIsExporting, resume, setResume,
+    activeSection, setActiveSection, activeEntryIndex, setActiveEntryIndex,
+    addEntry, deleteEntry, deleteSection
+  };
   return (
     <ResumeEditorContext.Provider value={value}>{children}</ResumeEditorContext.Provider>
   );

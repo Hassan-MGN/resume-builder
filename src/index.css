@@ -1,2 +1,100 @@
 @import "tailwindcss";
 
+/* ============================================================
+   RESUME PRINT / PDF STYLES
+   These rules apply when window.print() is called.
+   They ensure the resume paginates cleanly on A4 paper.
+   ============================================================ */
+
+@media print {
+  /* Reset body */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* The main resume container should flow naturally across multiple pages */
+  .resume-page {
+    width: 210mm;
+    position: relative;
+    box-shadow: none !important;
+  }
+
+  /* Keep logical resume blocks together where possible */
+  .resume-entry-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Section headings should stay with their first entry */
+  .resume-section-heading {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Two-column layout must not collapse */
+  .resume-two-col {
+    display: grid !important;
+  }
+
+  /* Hide all editor-specific UI */
+  [data-pdf-ignore],
+  .pdf-ignore {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   RESUME PREVIEW — MULTI-PAGE VISUAL SEPARATOR
+   Adds a visible gap between A4 pages in the editor canvas.
+   ============================================================ */
+
+.resume-page {
+  width: 794px;
+  min-height: 1123px;
+  background: white;
+}
+
+.resume-page + .resume-page {
+  margin-top: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+}
+
+/* Resume entry blocks — keep together in print */
+.resume-entry-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Section headings — stay with next element */
+.resume-section-heading {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Auto-apply break-inside to all article elements inside resume pages.
+   This covers Templates 1, 2, 3 and any future templates using <article>.
+   For Templates 4-11 which use <div> entry containers, we add the class manually. */
+#resume-preview article,
+#resume-export-root article {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Section headings inside resume pages — keep them with their content */
+#resume-preview h2,
+#resume-preview h3,
+#resume-export-root h2,
+#resume-export-root h3 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+

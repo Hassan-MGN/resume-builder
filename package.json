@@ -15,7 +15,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^2.17.1",
     "@tailwindcss/vite": "^4.3.3",
-    "framer-motion": "^13.1.0",
+    "framer-motion": "^13.1.1",
     "mammoth": "^1.12.1",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",

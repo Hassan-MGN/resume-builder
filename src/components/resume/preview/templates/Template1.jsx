@@ -509,12 +509,10 @@ const Template1 = ({
   };
 
   return (
-    <div className="flex justify-center bg-[#eef1f5]">
-      <div
-        id="resume-preview"
-        className="relative w-[794px] min-h-[1123px] overflow-hidden bg-white shadow-2xl"
-        style={{ color: colors.text }}
-      >
+    <div
+      className="w-full h-full bg-white relative overflow-hidden"
+      style={{ color: colors.text }}
+    >
         <div className="grid min-h-[1123px] grid-cols-[270px_1fr]">
 
           {/* ================= SIDEBAR (left column) ================= */}
@@ -608,7 +606,6 @@ const Template1 = ({
             {mainOrder.map(id => renderSection(id, false))}
 
           </ColumnZone>
-        </div>
       </div>
     </div>
   );

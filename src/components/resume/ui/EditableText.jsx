@@ -2,13 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { useResumeEditor } from "../preview/editor/ResumeEditorContext";
 
 const EditableText = ({value, onChange, className = "", style = {}, placeholder = "", multiline = false, elementId, readOnly = false,}) => {
-  const editor = (() => {
-    try {
-      return useResumeEditor();
-    } catch {
-      return null;
-    }
-  })();
+  const editor = useResumeEditor();
   const elementRef = useRef(null);
   const customStyles = elementId && editor?.resume?.layout?.elementStyles?.[elementId] ? editor.resume.layout.elementStyles[elementId] : {};
   const isSelected = elementId && editor?.selectedElement?.id === elementId;

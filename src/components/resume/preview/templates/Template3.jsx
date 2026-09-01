@@ -460,12 +460,10 @@ const Template3 = ({ resume, theme, sectionOrder, onResumeChange }) => {
   };
 
   return (
-    <div className="flex justify-center p-6 bg-[#eef1f5]">
-      <div
-        id="resume-preview"
-        className="relative w-[794px] min-h-[1123px] bg-white shadow-2xl overflow-hidden"
-        style={{ color: colors.text }}
-      >
+    <div
+      className="w-full h-full bg-white relative overflow-hidden"
+      style={{ color: colors.text }}
+    >
         {/* HEADER */}
         <header className="px-12 pt-12 pb-8">
           <div className="flex justify-between gap-10">
@@ -510,7 +508,6 @@ const Template3 = ({ resume, theme, sectionOrder, onResumeChange }) => {
           {orderedSections.map(renderSection)}
         </main>
       </div>
-    </div>
   );
 };
 

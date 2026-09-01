@@ -103,7 +103,7 @@ const ResumeWizard = ({ resume, setResume, template, setTemplate, theme, setThem
       <button type="button" onClick={onBack} className="text-sm text-black-600 font-medium mb-6 hover:underline">Back to Dashboard</button>
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         <div className="w-full lg:w-[280px] shrink-0 sticky top-[96px]"><StepSidebar  steps={WIZARD_STEPS}  currentStep={currentStep} completedSteps={completedSteps} onStepClick={handleStepClick}/></div>
-        <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[600px]">
+        <div className="flex-1 bg-white border border-gray-200 rounded-l shadow-sm overflow-hidden flex flex-col min-h-[600px]">
           <div className="flex-1 p-8"><StepHeader title={activeStep.title} description={activeStep.description} />
             <div className="mt-8">
               {currentStep < WIZARD_STEPS.length - 2 && (<Form resume={resume} setResume={setResume} activeStepId={activeStep.id} />)}

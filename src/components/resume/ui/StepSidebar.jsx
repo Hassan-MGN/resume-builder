@@ -2,7 +2,7 @@ import React from "react";
 
 const StepSidebar = ({ steps, currentStep, completedSteps, onStepClick }) => {
   return (
-    <div className="w-full h-full bg-white rounded-xl border border-gray-200 p-6 shadow-sm overflow-y-auto">
+    <div className="w-full h-full bg-white rounded-l border border-gray-200 p-6 shadow-sm overflow-y-auto">
       <div className="mb-6">
         <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Resume Progress</h3>
         <p className="text-sm font-medium text-gray-900">Step {currentStep + 1} of {steps.length}</p>

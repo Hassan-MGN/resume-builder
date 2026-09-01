@@ -463,12 +463,10 @@ const Template2 = ({ resume, theme, sectionOrder, onResumeChange }) => {
   };
 
   return (
-    <div className="flex justify-center p-6 bg-[#eef1f5]">
-      <div
-        id="resume-preview"
-        className="relative w-[794px] min-h-[1123px] overflow-hidden bg-white shadow-2xl"
-        style={{ color: colors.text }}
-      >
+    <div
+      className="w-full h-full bg-white relative overflow-hidden"
+      style={{ color: colors.text }}
+    >
         {/* TOP ACCENT */}
         <div
           className="h-2"
@@ -537,7 +535,6 @@ const Template2 = ({ resume, theme, sectionOrder, onResumeChange }) => {
           <ColumnZone columnId="right" className="p-7 bg-gray-50 border-l border-gray-100">
             {sidebarOrder.map(id => renderSection(id, true))}
           </ColumnZone>
-        </div>
       </div>
     </div>
   );

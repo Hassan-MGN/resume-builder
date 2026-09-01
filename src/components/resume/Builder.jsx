@@ -57,7 +57,7 @@ const initialResume = {
     ],
 
     fontFamily: "Inter",
-    fontSize: 14,
+    fontSize: 100,
     lineHeight: 1.5,
     sectionSpacing: 24,
     pageMargin: 40,

@@ -18,6 +18,7 @@ import TwoColumnDndContext from "./editor/TwoColumnDndContext";
 import {updateResumeAtPath,} from "../../../utils/resumeUpdate";
 import {ResumeEditorProvider,useResumeEditor,} from "./editor/ResumeEditorContext";
 import SelectionToolbar from "./editor/SelectionToolbar";
+import EntryEditorPanel from "./editor/EntryEditorPanel";
 
 const PreviewSkeleton = () => (
   <div className="flex justify-center p-8">
@@ -41,16 +42,83 @@ const PreviewSkeleton = () => (
 
 const defaultSectionOrder = ["summary", "experience","projects","education","skills","coreSkills","keyAchievements","certificates","languages","hobbies","additionalInformation",];
 const defaultLayout = {sectionOrder: defaultSectionOrder,fontFamily: "Inter",fontSize: 100,};
+const PAGE_WIDTH = 794;
+const PAGE_HEIGHT = 1123;
+const PAGE_BREAK_LIMIT = PAGE_HEIGHT * 0.92;
 const sectionLabels = { summary: "Summary", experience: "Experience", projects: "Projects", education: "Education", skills: "Skills", coreSkills: "Core Skills", keyAchievements: "Key Achievements", certificates: "Certificates", languages: "Languages", hobbies: "Hobbies & Interests", additionalInformation: "Additional Information",};
 const normalizeLayout = (layout = {}) => {
   const savedOrder = Array.isArray(layout.sectionOrder) ? layout.sectionOrder : [];
   const validSections = savedOrder.filter((section) => defaultSectionOrder.includes(section));
   const missingSections = defaultSectionOrder.filter((section) => !validSections.includes(section));
-  return {...defaultLayout, ...layout, sectionOrder: [ ...validSections, ...missingSections,], sectionLayout: layout.sectionLayout, fontFamily: layout.fontFamily || defaultLayout.fontFamily, fontSize: Number(layout.fontSize) || defaultLayout.fontSize,};
+  const normalizedFontSize = Number(layout.fontSize);
+  const effectiveFontSize = Number.isFinite(normalizedFontSize) ? (normalizedFontSize === 14 ? 100 : normalizedFontSize) : defaultLayout.fontSize;
+  return {...defaultLayout, ...layout, sectionOrder: [ ...validSections, ...missingSections,], sectionLayout: layout.sectionLayout, fontFamily: layout.fontFamily || defaultLayout.fontFamily, fontSize: effectiveFontSize,};
+};
+
+const estimateSectionWeight = (sectionId, resume = {}) => {
+  const getTextLength = (value) => String(value ?? "").replace(/<[^>]*>/g, "").trim().length;
+  switch (sectionId) {
+    case "summary":
+      return Math.max(180, Math.min(500, (resume.summary?.length ?? 0) * 1.8 + 180));
+    case "experience": {
+      const experience = Array.isArray(resume.experience) ? resume.experience : [];
+      return experience.reduce((total, item) => total + 180 + (getTextLength(item.position) * 1.8) + (getTextLength(item.company) * 1.3) + (getTextLength(item.description) * 0.9) + ((item.description?.split(/\s+/).filter(Boolean).length || 0) * 1.2), 0);
+    }
+    case "projects": {
+      const projects = Array.isArray(resume.projects) ? resume.projects : [];
+      return projects.reduce((total, item) => total + 170 + (getTextLength(item.name) * 2.2) + (getTextLength(item.description) * 0.9) + (getTextLength(item.technologies) * 1.3), 0);
+    }
+    case "education": {
+      const education = Array.isArray(resume.education) ? resume.education : [];
+      return education.reduce((total, item) => total + 140 + (getTextLength(item.degree) * 2) + (getTextLength(item.institution) * 1.8) + (getTextLength(item.description) * 0.7), 0);
+    }
+    case "skills":
+      return Math.max(70, (Array.isArray(resume.skills) ? resume.skills.length : 0) * 18 + 60);
+    case "coreSkills":
+      return Math.max(70, (Array.isArray(resume.coreSkills) ? resume.coreSkills.length : 0) * 18 + 60);
+    case "keyAchievements":
+      return Math.max(70, (Array.isArray(resume.keyAchievements) ? resume.keyAchievements.length : 0) * 20 + 60);
+    case "certificates":
+      return Math.max(70, (Array.isArray(resume.certificates) ? resume.certificates.length : 0) * 26 + 60);
+    case "languages":
+      return Math.max(70, (Array.isArray(resume.languages) ? resume.languages.length : 0) * 22 + 60);
+    case "hobbies":
+      return Math.max(70, (Array.isArray(resume.hobbies) ? resume.hobbies.length : 0) * 18 + 60);
+    case "additionalInformation":
+      return Math.max(140, (Array.isArray(resume.additionalInformation) ? resume.additionalInformation.length : 0) * 110 + 100);
+    default:
+      return 120;
+  }
+};
+
+const buildDocumentPages = ({ sectionOrder = defaultSectionOrder, resume = {}, template }) => {
+  const orderedSections = Array.isArray(sectionOrder) ? sectionOrder.filter(Boolean) : defaultSectionOrder;
+  const pages = [];
+  let currentPage = [];
+  let currentHeight = 0;
+
+  orderedSections.forEach((sectionId) => {
+    const weight = estimateSectionWeight(sectionId, resume, template);
+    if (!weight) return;
+    if (currentPage.length && currentHeight + weight > PAGE_BREAK_LIMIT) {
+      pages.push(currentPage);
+      currentPage = [];
+      currentHeight = 0;
+    }
+    currentPage.push(sectionId);
+    currentHeight += weight;
+  });
+
+  if (currentPage.length) {
+    pages.push(currentPage);
+  }
+
+  return pages.length ? pages : [orderedSections];
 };
 
 const TWO_COLUMN_TEMPLATES = new Set(["Professional", "Modern", "Strategic"]);
-const TemplateRenderer = ({ resume, template, theme, sectionOrder, sectionLayout, onResumeChange, onSectionReorder, onSectionLayoutChange,}) => {
+const TemplateRenderer = ({ resume, template, theme, sectionOrder, sectionLayout, onResumeChange, onSectionReorder, onSectionLayoutChange, sections,}) => {
+  const orderedSections = Array.isArray(sections) && sections.length ? sections : sectionOrder;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -132,7 +200,7 @@ const Preview = ({ resume, setResume, template,
   const [isDownloading, setIsDownloading] =
     useState(false);
   const [zoom, setZoom] =
-    useState(0.72);
+    useState(1);
   const [showGuides, setShowGuides] =
     useState(false);
   const [theme, setTheme] = useState({ primary: "#172033", secondary: "#64748b", text: "#1f2937", muted: "#64748b", border: "#e2e8f0", light: "#eef2ff", });
@@ -275,7 +343,7 @@ const Preview = ({ resume, setResume, template,
 
   const resetZoom = () => {
 
-    setZoom(0.72);
+    setZoom(1);
     if (
       previewScrollRef.current
     ) {
@@ -291,36 +359,49 @@ const Preview = ({ resume, setResume, template,
       editorContext.clearSelection();
       editorContext.setIsExporting(true);
     }
-    await new Promise((r) => setTimeout(r, 80));
+    // Wait for isExporting state to propagate (removes editor UI)
+    await new Promise((r) => setTimeout(r, 120));
     try {
+      // We clone the main preview container. 
+      // The CSS transform: scale() is overridden inline below.
       const source = document.getElementById("resume-preview");
       if (!source) {
         throw new Error("Resume preview element was not found.");
       }
       const exportElement = source.cloneNode(true);
-      exportElement.querySelectorAll("[data-pdf-ignore], .pdf-ignore").forEach((element) => {
-        element.remove();
-      });
+      // Remove all editor-only UI nodes from the clone
+      exportElement.querySelectorAll("[data-pdf-ignore], .pdf-ignore").forEach((el) => el.remove());
+
       const printContainer = document.createElement("div");
       printContainer.id = "print-container";
-      printContainer.style.position = "absolute";
-      printContainer.style.left = "0";
-      printContainer.style.top = "0";
-      printContainer.style.width = "100%";
-      printContainer.style.background = "white";
-      printContainer.style.zIndex ="999999";
-      exportElement.style.margin ="0 auto";
-      exportElement.style.width ="210mm";
-      exportElement.style.minHeight ="297mm";
-      exportElement.style.transform ="none";
-      exportElement.style.boxShadow ="none";
+      // position: fixed prevents pagination in window.print(). Using absolute allows it to span multiple pages.
+      printContainer.style.cssText = "position:absolute;left:0;top:0;width:100%;background:white;z-index:999999;";
+      // Set width to 100% instead of 210mm to prevent the browser from scaling it down and creating white borders
+      exportElement.style.cssText = "margin:0;width:100%;transform:none !important;box-shadow:none;";
       printContainer.appendChild(exportElement);
       document.body.appendChild(printContainer);
+
       const style = document.createElement("style");
-      style.innerHTML = `@media print {body > :not(#print-container) {display: none !important;}@page {size: A4 portrait;margin: 0;}body {margin: 0 !important;padding: 0 !important;background: white !important;-webkit-print-color-adjust: exact;print-color-adjust: exact;}}`;
+      style.id = "resume-print-style";
+      style.innerHTML = [
+        "@media print {",
+        "  body > :not(#print-container) { display: none !important; }",
+        "  @page { size: A4 portrait; margin: 0; }",
+        "  body { margin: 0 !important; padding: 0 !important; background: white !important;",
+        "    -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
+        "  .resume-page { width: 100% !important; position: relative; overflow: visible !important; box-shadow: none !important; }",
+        "  /* Force all templates to stretch horizontally and remove their hardcoded widths */",
+        "  #resume-preview > div { width: 100% !important; max-width: none !important; min-height: 0 !important; box-shadow: none !important; }",
+        "  .resume-entry-block { break-inside: avoid; page-break-inside: avoid; }",
+        "  .resume-section-heading { break-after: avoid; page-break-after: avoid; }",
+        "  [data-pdf-ignore], .pdf-ignore { display: none !important; }",
+        "}",
+      ].join("\n");
       document.head.appendChild(style);
-      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
       window.print();
+
       document.body.removeChild(printContainer);
       document.head.removeChild(style);
     } catch (error) {
@@ -338,6 +419,7 @@ const Preview = ({ resume, setResume, template,
     <ResumeEditorProvider resume={resume} setResume={setResume}>
       <div className="w-full relative">
         <SelectionToolbar />
+        <EntryEditorPanel />
         <div className="sticky top-0 z-30 mb-4">
           <div className="rounded-lg border border-gray-200 bg-white/95 backdrop-blur-xl shadow-lg px-4 py-3">
             <div className="flex items-center justify-between gap-4">
@@ -389,25 +471,7 @@ const Preview = ({ resume, setResume, template,
                 )}
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-gray-100" data-pdf-ignore>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-400">Section Order</span>
-                <button type="button" onClick={() => updateLayout({sectionOrder: defaultSectionOrder,})} className="text-[10px] text-gray-400 hover:text-gray-700">Reset order</button>
-              </div>
-              <DndContext sensors={sensors} collisionDetection={ closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={layout.sectionOrder} strategy={horizontalListSortingStrategy}>
-                  <div className="flex flex-wrap gap-2">
-                    {layout.sectionOrder.map(
-                      (sectionId, index) => (
-                        <SortableChip key={sectionId} id={sectionId} label={sectionLabels[sectionId] || sectionId} index={index} total={layout.sectionOrder.length}onMove={moveSection}/>
-                      )
-                    )}
-                  </div>
-                </SortableContext>
-
-              </DndContext>
-
-            </div>
+            
 
           </div>
 
@@ -426,10 +490,12 @@ const Preview = ({ resume, setResume, template,
           </div>
           <div ref={previewScrollRef} className="relative overflow-auto h-[calc(100vh-230px)] min-h-[760px]">
             <CanvasClearSelection />
-            {showGuides && (
-              <div className="absolute left-0 right-0 border-t-2 border-dashed border-red-400/60 pointer-events-none z-20" style={{top: `${1123 * zoom}px`}}>
-                <span className="absolute right-3 -top-5 text-[9px] font-semibold text-red-400 bg-[#dfe3e8] px-2"> PAGE 2 START </span>
-              </div>)}
+            {/* Page-break guide lines — show at every A4 page boundary */}
+            {showGuides && [1,2,3].map((pageNum) => (
+              <div key={pageNum} className="absolute left-0 right-0 border-t-2 border-dashed border-red-400/60 pointer-events-none z-20" data-pdf-ignore="true" style={{top: `${1123 * pageNum * zoom}px`}}>
+                <span className="absolute right-3 -top-5 text-[9px] font-semibold text-red-400 bg-[#dfe3e8] px-2"> PAGE {pageNum + 1} START </span>
+              </div>
+            ))}
             <AnimatePresence mode="wait">
               {isSwitching ? (
                 <motion.div key="skeleton" initial={{ opacity: 0,}} animate={{ opacity: 1,}} exit={{ opacity: 0,}}>
@@ -437,7 +503,7 @@ const Preview = ({ resume, setResume, template,
                 </motion.div>
               ) : (
                 <motion.div key={`${template}-${theme.primary}-${layout.fontFamily}-${layout.fontSize}`} initial={{ opacity: 0, y: 15, scale: 0.98,}} animate={{ opacity: 1, y: 0, scale: 1,}} transition={{ duration: 0.4, ease: [0.22,1,0.36,1,]}} style={{ transform: `scale(${zoom})`, transformOrigin: "top center", width: `${100 / zoom}%`, minHeight: `${1123 / zoom}px`,}}>
-                  <div id="resume-preview" className="w-[794px] min-h-[1123px] bg-white mx-auto" style={{ fontFamily: layout.fontFamily, fontSize: `${(16 * layout.fontSize) / 100}px`,}}>
+                  <div id="resume-preview" className="resume-page mx-auto" style={{ fontFamily: layout.fontFamily, fontSize: `${(16 * layout.fontSize) / 100}px`,}}>
                     <TemplateRenderer resume={resume} template={template} theme={theme} sectionOrder={layout.sectionOrder} sectionLayout={layout.sectionLayout} onResumeChange={(path, value) => setResume((current) => updateResumeAtPath(current, path, value))} onSectionReorder={(newOrder) => updateLayout({ sectionOrder: newOrder })} onSectionLayoutChange={(newLayout) => updateLayout({ sectionLayout: newLayout })}/>
                   </div>
                 </motion.div>
