@@ -1,0 +1,329 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  --color-bg:          #F7F7F5;
+  --color-surface:     #FFFFFF;
+  --color-border:      #E2E4E6;
+  --color-border-subtle: #EEEFF1;
+  --color-text:        #151719;
+  --color-muted:       #626870;
+  --color-subtle:      #9BA3AE;
+  --color-accent:      #087CB8;
+  --color-accent-soft: #EAF5FA;
+  --color-accent-hover:#065E8C;
+  --color-success:     #27865B;
+  --color-warning:     #B7791F;
+  --color-error:       #C94B4B;
+
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  10px;
+  --radius-xl:  12px;
+
+  --font-ui:   'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'Fira Mono', ui-monospace, monospace;
+}
+
+/* ============================================================
+   GLOBAL RESETS & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-ui);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   RESUME PRINT / PDF STYLES
+   ============================================================ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .resume-page {
+    width: 210mm;
+    position: relative;
+    box-shadow: none !important;
+  }
+  .resume-entry-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .resume-section-heading {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .resume-two-col {
+    display: grid !important;
+  }
+  [data-pdf-ignore],
+  .pdf-ignore {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   RESUME PREVIEW — MULTI-PAGE
+   ============================================================ */
+.resume-page {
+  width: 794px;
+  min-height: 1123px;
+  background: white;
+  overflow-wrap: anywhere;
+}
+
+/* Long URLs and unusually long words must never force a resume column wider than A4. */
+.resume-page a,
+.resume-page [data-resume-link],
+.resume-page .break-all {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Flex/grid children inside templates need permission to shrink when content is long. */
+.resume-page .flex > *,
+.resume-page .grid > * {
+  min-width: 0;
+}
+
+.resume-page + .resume-page {
+  margin-top: 24px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+}
+
+.resume-entry-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.resume-section-heading {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+#resume-preview article,
+#resume-export-root article {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+#resume-preview h2,
+#resume-preview h3,
+#resume-export-root h2,
+#resume-export-root h3 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   RESUME PRINT / PDF STYLES
+   These rules apply when window.print() is called.
+   They ensure the resume paginates cleanly on A4 paper.
+   ============================================================ */
+
+@media print {
+  /* Reset body */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* The main resume container should flow naturally across multiple pages */
+  .resume-page {
+    width: 210mm;
+    position: relative;
+    box-shadow: none !important;
+  }
+
+  /* Keep logical resume blocks together where possible */
+  .resume-entry-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Section headings should stay with their first entry */
+  .resume-section-heading {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Two-column layout must not collapse */
+  .resume-two-col {
+    display: grid !important;
+  }
+
+  /* Hide all editor-specific UI */
+  [data-pdf-ignore],
+  .pdf-ignore {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   RESUME PREVIEW — MULTI-PAGE VISUAL SEPARATOR
+   Adds a visible gap between A4 pages in the editor canvas.
+   ============================================================ */
+
+.resume-page {
+  width: 794px;
+  min-height: 1123px;
+  background: white;
+}
+
+.resume-page + .resume-page {
+  margin-top: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+}
+
+/* Resume entry blocks — keep together in print */
+.resume-entry-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Section headings — stay with next element */
+.resume-section-heading {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Auto-apply break-inside to all article elements inside resume pages.
+   This covers Templates 1, 2, 3 and any future templates using <article>.
+   For Templates 4-11 which use <div> entry containers, we add the class manually. */
+#resume-preview article,
+#resume-export-root article {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Section headings inside resume pages — keep them with their content */
+#resume-preview h2,
+#resume-preview h3,
+#resume-export-root h2,
+#resume-export-root h3 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+
+
+/* Resume workspace editor polish */
+.resume-workspace-scroll {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd0d2 transparent;
+}
+
+.resume-workspace-scroll::-webkit-scrollbar { width: 8px; }
+.resume-workspace-scroll::-webkit-scrollbar-track { background: transparent; }
+.resume-workspace-scroll::-webkit-scrollbar-thumb { background: #cbd0d2; border-radius: 999px; }
+.resume-workspace-scroll::-webkit-scrollbar-thumb:hover { background: #adb4b7; }
+
+
+/* ============================================================
+   MOBILE RESUME WORKSPACE
+   ============================================================ */
+.resume-workspace-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c8cbc7 transparent;
+}
+
+@media (max-width: 1023px) {
+  .resume-page {
+    transform-origin: top center;
+  }
+
+  .resume-mobile-canvas {
+    min-width: 794px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resume-mobile-canvas {
+    min-width: 794px;
+  }
+}
+
+/* Narrow preview surfaces: keep the canvas pannable without causing document-level overflow. */
+@media (max-width: 767px) {
+  .resume-workspace-scroll {
+    overscroll-behavior: contain;
+  }
+
+  .resume-mobile-canvas {
+    justify-content: flex-start;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  #resume-preview {
+    touch-action: pan-x pan-y;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .resume-mobile-canvas {
+    justify-content: center;
+  }
+}
+
+@keyframes loading-bar {
+  0% { transform: translateX(-110%); }
+  50% { transform: translateX(70%); }
+  100% { transform: translateX(220%); }
+}
+
+/* Keep Vercel's local development toolbar from becoming part of the product UI. */
+html[data-resummetry-local] [data-vercel-toolbar],
+html[data-resummetry-local] #vercel-toolbar,
+html[data-resummetry-local] vercel-live-feedback,
+html[data-resummetry-local] nextjs-portal,
+html[data-resummetry-local] [id*="vercel-toolbar"],
+html[data-resummetry-local] [class*="vercel-toolbar"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* In local Vercel development, keep injected collaboration chrome outside the
+   React root out of the product viewport. Production is unaffected. */
+html[data-resummetry-local] body > *:not(#root) {
+  display: none !important;
+}

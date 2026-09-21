@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /builder
+Disallow: /profile
+Disallow: /templates
+Sitemap: https://yourdomain.example/sitemap.xml

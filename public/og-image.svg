@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f7f7f5"/>
+  <rect x="780" y="72" width="280" height="430" rx="4" fill="#fff" stroke="#dfe2e4" stroke-width="3" transform="rotate(6 920 287)"/>
+  <rect x="836" y="106" width="220" height="430" rx="4" fill="#fff" stroke="#dfe2e4" stroke-width="3" transform="rotate(-4 946 321)"/>
+  <g transform="translate(92 72) scale(.72)">
+    <path fill="#151719" d="M9 52V12h25c10.5 0 17 5.2 17 14.1 0 7.1-4.2 12.1-11.2 13.7L52 52H39.5L28.2 40.7H20V52H9Zm11-21h13c4.3 0 7-1.5 7-4.9S37.3 21 33 21H20v10Z"/>
+    <path fill="#087CB8" d="M31.2 52 53 30.2V52H42.3v-8.7L39 46.6V52h-7.8Zm0-25.8L39 18.4V12h14v11.1l-7.7 7.7v-8.5l-14.1 14.1V26.2Z"/>
+  </g>
+  <text x="145" y="108" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#151719">Resummetry</text>
+  <text x="145" y="135" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="3" fill="#626870">SHAPE YOUR CAREER STORY</text>
+  <text x="92" y="210" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700" fill="#151719">Your career.</text>
+  <text x="92" y="292" font-family="Arial, Helvetica, sans-serif" font-size="84" font-weight="800" fill="#087cb8">Better on paper.</text>
+  <text x="96" y="360" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#626870">Build a resume that feels like you.</text>
+  <rect x="96" y="404" width="170" height="48" rx="7" fill="#151719"/>
+  <text x="132" y="436" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#fff">Create resume</text>
+</svg>
